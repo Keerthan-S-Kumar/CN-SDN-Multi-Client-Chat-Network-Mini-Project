@@ -1,17 +1,17 @@
 # Replace with the real GitHub usernames: A=Janhvi, B=Keerthan, C=Harsha.
-/chat/server.py     @USER_A
-/chat/client.py     @USER_A
-/chat/bot.py        @USER_A
-/chat/spam.py       @USER_A
-/eval/analyze.py    @USER_A
-/eval/plot.py       @USER_A
-/controller/        @USER_B
-/topology/          @USER_C
-/eval/run_experiments.py @USER_C
-/tests/             @USER_C
-/README.md          @USER_C
-/docs/              @USER_A @USER_B @USER_C
-/common/            @USER_A @USER_B @USER_C
-/chat/protocol.py   @USER_A @USER_B @USER_C
-/chat/notifier.py   @USER_A @USER_B @USER_C
-/tools/             @USER_A @USER_B @USER_C
+/chat/server.py     @janhviagr
+/chat/client.py     @janhviagr
+/chat/bot.py        @janhviagr
+/chat/spam.py       @janhviagr
+/eval/analyze.py    @janhviagr
+/eval/plot.py       @janhviagr
+/controller/        @Keerthan-S-Kumar
+/topology/          @harsha-ck
+/eval/run_experiments.py @harsha-ck
+/tests/             @harsha-ck
+/README.md          @harsha-ck
+/docs/              @janhviagr @Keerthan-S-Kumar @harsha-ck
+/common/            @janhviagr @Keerthan-S-Kumar @harsha-ck
+/chat/protocol.py   @janhviagr @Keerthan-S-Kumar @harsha-ck
+/chat/notifier.py   @janhviagr @Keerthan-S-Kumar @harsha-ck
+/tools/             @janhviagr @Keerthan-S-Kumar @harsha-ck
