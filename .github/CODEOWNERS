@@ -1,0 +1,17 @@
+# Replace with the real GitHub usernames: A=Janhvi, B=Keerthan, C=Harsha.
+/chat/server.py     @USER_A
+/chat/client.py     @USER_A
+/chat/bot.py        @USER_A
+/chat/spam.py       @USER_A
+/eval/analyze.py    @USER_A
+/eval/plot.py       @USER_A
+/controller/        @USER_B
+/topology/          @USER_C
+/eval/run_experiments.py @USER_C
+/tests/             @USER_C
+/README.md          @USER_C
+/docs/              @USER_A @USER_B @USER_C
+/common/            @USER_A @USER_B @USER_C
+/chat/protocol.py   @USER_A @USER_B @USER_C
+/chat/notifier.py   @USER_A @USER_B @USER_C
+/tools/             @USER_A @USER_B @USER_C
