@@ -15,16 +15,16 @@ def port_name():
 
 
 def _ovs(args):
-    subprocess.check_call(["ovs-vsctl"] + list(args))
+    subprocess.check_call(["ovs-vsctl"] + list(args), stdout=subprocess.DEVNULL)
 
 
 def clear_qos(port=None):
     """Detach QoS from the port and delete all QoS/Queue records (safe to call repeatedly)."""
     port = port or port_name()
     subprocess.call(["ovs-vsctl", "--if-exists", "clear", "port", port, "qos"],
-                    stderr=subprocess.DEVNULL)
-    subprocess.call(["ovs-vsctl", "--all", "destroy", "qos"], stderr=subprocess.DEVNULL)
-    subprocess.call(["ovs-vsctl", "--all", "destroy", "queue"], stderr=subprocess.DEVNULL)
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.call(["ovs-vsctl", "--all", "destroy", "qos"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.call(["ovs-vsctl", "--all", "destroy", "queue"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def setup_qos(port=None):
