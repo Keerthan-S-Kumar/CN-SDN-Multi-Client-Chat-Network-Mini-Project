@@ -106,8 +106,18 @@ def handle_control(conn, req):
                 tokens[token] = user
                 online[user] = conn
                 conn.user = user
+        if code == "BAD_CREDENTIALS":
+            with lock:
+                bad_logins[conn.ip] = bad_logins.get(conn.ip, 0) + 1
+                tripped = bad_logins[conn.ip] >= MAX_BAD_LOGINS
+                if tripped:
+                    bad_logins[conn.ip] = 0
+            if tripped:
+                emit("block", user, conn.ip, reason="bad_login")
         if code:
             return err(conn, req, code)
+        with lock:
+            bad_logins.pop(conn.ip, None)
         emit(t.lower(), user, conn.ip)
         return ok(conn, req, token=token)
 
