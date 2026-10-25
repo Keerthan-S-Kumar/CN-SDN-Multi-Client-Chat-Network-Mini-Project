@@ -15,6 +15,7 @@ import traceback
 # make `chat.protocol` importable when running `python3 chat/server.py`
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from chat.protocol import send_msg, recv_msg  # noqa: E402
+from chat.notifier import notify  # noqa: E402
 
 CONTROL, ROOM, PM = 5000, 5001, 5002
 KIND = {ROOM: "room", PM: "pm"}
@@ -49,8 +50,10 @@ class Conn:
 
 
 def emit(event, user, ip, **extra):
-    """Tell the SDN controller. TODO: replace body with chat/notifier.py call."""
-    print(f"[event] {event} user={user} ip={ip} {extra}")
+    """Tell the SDN controller (blocking, 1 s timeout, never raises)."""
+    ok_sent = notify(event, user, ip,
+                     room=extra.get("room"), reason=extra.get("reason"))
+    print(f"[event] {event} user={user} ip={ip} {extra} sent={ok_sent}")
 
 
 def ok(conn, req, **extra):
