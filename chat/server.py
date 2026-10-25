@@ -15,7 +15,7 @@ import traceback
 # make `chat.protocol` importable when running `python3 chat/server.py`
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from chat.protocol import send_msg, recv_msg  # noqa: E402
-from common.constants import MAX_BULK  # noqa: E402
+from common.constants import MAX_BULK, MAX_BAD_LOGINS  # noqa: E402
 from chat.spam import SpamDetector  # noqa: E402
 from chat.notifier import notify  # noqa: E402
 
@@ -26,6 +26,7 @@ NAME_RE = re.compile(r"^[A-Za-z0-9_]{1,16}$")
 # ---- shared state: ALWAYS touch it inside `with lock:` ----
 lock = threading.RLock()
 spam = SpamDetector()
+bad_logins = {}                   # ip -> consecutive bad logins
 users = {}                        # name -> sha256(password)
 tokens = {}                       # token -> name
 online = {}                       # name -> Conn on port 5000
