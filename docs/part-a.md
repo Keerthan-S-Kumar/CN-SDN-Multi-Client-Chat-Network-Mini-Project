@@ -43,6 +43,8 @@ If the controller is unreachable the failure is logged and chat continues normal
 
 A sliding window per user: 20 messages within 5 s raises a `flag` event, once per episode. After 30 s without messages the user is unflagged (also on disconnect). The server does not limit flagged users itself; the network (meter) does the throttling.
 
+The flag is per user, but the controller throttles per source IP, so every client on the same host as a spammer is throttled too. In experiments, run the spammer bot on a different host from the bots being measured.
+
 ## 5. Brute-force protection
 
 Only failed `LOGIN` attempts count. After 5 consecutive `BAD_CREDENTIALS` from one IP the server sends a `block` event with reason `bad_login` and resets that IP's counter. A successful login also resets it. The controller applies the actual block.
@@ -73,6 +75,8 @@ python3 chat/bot.py --server 127.0.0.1 --users 5 --prefix t --rate 2 --duration 
 ```
 
 Set `CONTROLLER_URL=http://127.0.0.1:8080` and run `tools/mock_controller.py` to see events accepted instead of timing out.
+
+On the Mininet network, `make server` starts the server on h1 (see the README's Running section); clients and bots run on h2 to h4 with `--server 10.0.0.1`.
 
 ## 10. Testing done
 
