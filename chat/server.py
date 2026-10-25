@@ -15,10 +15,11 @@ import traceback
 # make `chat.protocol` importable when running `python3 chat/server.py`
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from chat.protocol import send_msg, recv_msg  # noqa: E402
+from common.constants import MAX_BULK  # noqa: E402
 from chat.notifier import notify  # noqa: E402
 
-CONTROL, ROOM, PM = 5000, 5001, 5002
-KIND = {ROOM: "room", PM: "pm"}
+CONTROL, ROOM, PM, BULK = 5000, 5001, 5002, 5003
+KIND = {ROOM: "room", PM: "pm", BULK: "bulk"}
 NAME_RE = re.compile(r"^[A-Za-z0-9_]{1,16}$")
 
 # ---- shared state: ALWAYS touch it inside `with lock:` ----
@@ -27,8 +28,7 @@ users = {}                        # name -> sha256(password)
 tokens = {}                       # token -> name
 online = {}                       # name -> Conn on port 5000
 rooms = {}                        # room -> set of names
-attached = {"room": {}, "pm": {}} # kind -> {name: Conn}
-
+attached = {"room": {}, "pm": {}, "bulk": {}} # kind -> {name: Conn}
 
 class Conn:
     """One client connection. send_lock stops two threads mixing frames."""
@@ -164,8 +164,19 @@ def handle_attach(conn, req, port):
         return err(conn, req, "BAD_TOKEN")
     return ok(conn, req)
 
+def handle_bulk(conn, req):
+    if req.get("type") != "BULK":
+        return err(conn, req, "BAD_REQUEST", "unknown type")
+    size = req.get("size")
+    if not (isinstance(size, int) and not isinstance(size, bool)
+            and 0 < size <= MAX_BULK):
+        return err(conn, req, "BAD_REQUEST", f"size must be 1..{MAX_BULK}")
+    ok(conn, req)
+    conn.send({"type": "BULK_DATA", "data": "x" * size})
 
 def handle_data(conn, req, port):
+    if port == BULK:
+        return handle_bulk(conn, req)
     t = req.get("type")
     text = req.get("text")
     if not isinstance(text, str):
@@ -277,7 +288,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="0.0.0.0")
     args = ap.parse_args()
-    for p in (CONTROL, ROOM, PM):
+    for p in (CONTROL, ROOM, PM, BULK):
         threading.Thread(target=listen, args=(args.host, p), daemon=True).start()
     try:
         while True:
