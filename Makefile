@@ -1,9 +1,11 @@
 export PYTHONPATH := .
 MODE ?= sdn
+RYU ?= $(shell command -v ryu-manager 2>/dev/null || echo $(HOME)/ryuenv/bin/ryu-manager)
+PY ?= $(dir $(RYU))python3
 TOPO ?= single
 
 controller:
-	CONTROLLER_MODE=$(MODE) ryu-manager controller/app.py
+	CONTROLLER_MODE=$(MODE) $(RYU) controller/app.py
 
 topo:
 	sudo env PYTHONPATH=. python3 topology/topo.py --topo $(TOPO) --cli
@@ -33,6 +35,7 @@ report:
 	python3 eval/analyze.py && python3 eval/plot.py
 
 test:
-	python3 -m unittest discover -s tests -v
+	$(PY) -m unittest controller.test_logic -v
+	@if ls tests/test_*.py >/dev/null 2>&1; then python3 -m unittest discover -s tests -v; fi
 
 .PHONY: controller topo server mock flows meters queues metrics experiments report test

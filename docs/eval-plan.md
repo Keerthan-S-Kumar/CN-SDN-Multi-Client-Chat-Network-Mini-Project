@@ -9,7 +9,7 @@ on the **same triangle topology and same QoS queues**. Only the controller mode 
 |---|---|---|
 | `idle` | bots only, h2/h3/h4 | overhead of SDN (should be ≈ baseline) |
 | `congested` | + `iperf` UDP 12 Mbps h3→h1 (port 5201) | queues/heavy-hitter meter protect chat latency |
-| `flood` | + one spammer bot (200 msg/s) | flag → throttle protects other users |
+| `flood` | + one spammer bot (200 msg/s) **alone on h4** (rules are per IP, so a flag throttles the whole host) | flag → throttle protects other users |
 | `linkfail` | `s1–s2` taken down at t=10 s, restored at t=20 s | rerouting vs black-hole; recovery time |
 | `scale5…scale100` | N bots spread over h2,h3,h4, no background | scalability: latency/throughput vs N |
 

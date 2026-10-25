@@ -91,7 +91,8 @@ Table 0 = policy, table 1 = routing. `sdn` mode installs everything below; `base
 | 1 | 0 | any | send to controller | — |
 | 1 | 10 | `eth_dst` (per switch) | output (next-hop port) | — |
 
-Always delete rules with an exact cookie **and** `ipv4_src` match, never a loose delete.
+Table-1 route flows carry cookie `0x1000` so they can be cleared without touching the table-miss rule.
+Always delete rules with an exact cookie **and** `ipv4_src` match, never a loose delete. Per-IP rules are installed on **every** switch; rules are per IP, so users sharing one host IP share its policy.
 Meters (installed on every switch at connect): `METER_THROTTLE`=1 at `THROTTLE_KBPS`, `METER_HEAVY`=2 at `HEAVY_KBPS`, each one drop band.
 
 ## 6. Entry points
