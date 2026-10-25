@@ -16,6 +16,7 @@ import traceback
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from chat.protocol import send_msg, recv_msg  # noqa: E402
 from common.constants import MAX_BULK  # noqa: E402
+from chat.spam import SpamDetector  # noqa: E402
 from chat.notifier import notify  # noqa: E402
 
 CONTROL, ROOM, PM, BULK = 5000, 5001, 5002, 5003
@@ -24,6 +25,7 @@ NAME_RE = re.compile(r"^[A-Za-z0-9_]{1,16}$")
 
 # ---- shared state: ALWAYS touch it inside `with lock:` ----
 lock = threading.RLock()
+spam = SpamDetector()
 users = {}                        # name -> sha256(password)
 tokens = {}                       # token -> name
 online = {}                       # name -> Conn on port 5000
@@ -181,6 +183,8 @@ def handle_data(conn, req, port):
     text = req.get("text")
     if not isinstance(text, str):
         return err(conn, req, "BAD_REQUEST", "text must be a string")
+    if spam.record(conn.user, time.time()):
+        emit("flag", conn.user, conn.ip, reason="spam")
 
     if port == ROOM and t == "MSG_ROOM":
         room = req.get("room")
@@ -242,6 +246,8 @@ def cleanup(conn, port):
         for c in extras:
             if c:
                 c.close()
+        if spam.forget(user):
+          emit("unflag", user, conn.ip, reason="spam")
         emit("disconnect", user, conn.ip)
     else:
         with lock:
@@ -271,6 +277,16 @@ def serve_client(sock, addr, port):
     finally:
         cleanup(conn, port)
 
+def spam_watch():
+    """Every second, unflag users who have been quiet long enough."""
+    while True:
+        time.sleep(1)
+        now = time.time()
+        for user in spam.flagged_users():
+            if spam.quiet(user, now):
+                with lock:
+                    c = online.get(user)
+                emit("unflag", user, c.ip if c else "", reason="spam")
 
 def listen(host, port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -288,6 +304,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="0.0.0.0")
     args = ap.parse_args()
+    threading.Thread(target=spam_watch, daemon=True).start()
     for p in (CONTROL, ROOM, PM, BULK):
         threading.Thread(target=listen, args=(args.host, p), daemon=True).start()
     try:
