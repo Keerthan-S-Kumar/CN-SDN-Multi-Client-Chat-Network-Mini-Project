@@ -1,5 +1,1 @@
-{
-  "vip_users": ["alice"],
-  "vip_rooms": ["vip"],
-  "banned_users": []
-}
+{"vip_users": ["alice"], "vip_rooms": ["vip"], "banned_users": []}
