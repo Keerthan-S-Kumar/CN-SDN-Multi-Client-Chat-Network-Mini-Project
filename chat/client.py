@@ -120,7 +120,8 @@ class Client:
                         print(f"\n[PM from {m['from']}] {m['text']}")
                 elif m.get("type") == "ERR":
                     print(f"\n! {m['code']}: {m.get('msg', '')}")
-                print("> ", end="", flush=True)
+                if m.get("type") in ("MSG", "ERR"):
+                    print("> ", end="", flush=True)                
         except (ConnectionError, OSError, ValueError):
             if self.running:
                 print("\n[connection to server closed]")
