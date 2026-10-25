@@ -12,6 +12,7 @@ Course: Computer Networks (UE25CS243A), SDN-Socket Programming mini project.
 | [`docs/architecture.md`](docs/architecture.md) | Components, topologies, flow-table design, dynamic behaviour |
 | [`docs/interfaces.md`](docs/interfaces.md) | The frozen contract: ports, message formats, events, flow rows |
 | [`docs/eval-plan.md`](docs/eval-plan.md) | Scenarios, metrics and result formats |
+| [`docs/part-a.md`](docs/part-a.md) | Part A: chat server, client, bots, spam detection, analysis scripts |
 
 ## Team
 
