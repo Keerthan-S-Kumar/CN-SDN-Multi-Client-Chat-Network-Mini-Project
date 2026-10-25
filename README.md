@@ -10,6 +10,8 @@ Course: Computer Networks (UE25CS243A), SDN-Socket Programming mini project.
 | Doc | What it covers |
 |---|---|
 | [`docs/architecture.md`](docs/architecture.md) | Components, topologies, flow-table design, dynamic behaviour |
+| [`docs/controller.md`](docs/controller.md) | Controller design, flow table, dynamic behaviour, test cases T1-T12 |
+| [`docs/demo-d1.md`](docs/demo-d1.md) | Step-by-step D1 live demo |
 | [`docs/interfaces.md`](docs/interfaces.md) | The frozen contract: ports, message formats, events, flow rows |
 | [`docs/eval-plan.md`](docs/eval-plan.md) | Scenarios, metrics and result formats |
 | [`docs/part-a.md`](docs/part-a.md) | Part A: chat server, client, bots, spam detection, analysis scripts |
@@ -99,6 +101,10 @@ sudo env PYTHONPATH=. python3 topology/topo.py --topo single      # pingall, exi
 Useful inspection targets: `make flows`, `make meters`, `make queues`, `make metrics`.
 
 ## Tests
+
+Controller (no root, no Mininet, needs the Ryu environment): `make test` runs 20 tests. With the project running,
+`bash controller/verify_live.sh` checks the installed rules. The full test-case table is in
+[`docs/controller.md`](docs/controller.md). Network tests (root): `make test-net`.
 
 Topology tests need root and (for the single topology) a running OpenFlow 1.3 controller.
 

@@ -36,6 +36,8 @@ report:
 
 test:
 	$(PY) -m unittest controller.test_logic -v
-	@if ls tests/test_*.py >/dev/null 2>&1; then python3 -m unittest discover -s tests -v; fi
 
-.PHONY: controller topo server mock flows meters queues metrics experiments report test
+test-net:
+	sudo env PYTHONPATH=. python3 -m unittest discover -s tests -v
+
+.PHONY: test-net controller topo server mock flows meters queues metrics experiments report test

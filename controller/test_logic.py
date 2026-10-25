@@ -156,7 +156,6 @@ class TestApp(unittest.TestCase):
         self.appmod = appmod
         self.tmp = tempfile.mkdtemp()
         self.patches = [mock.patch.object(appmod, "CONTROLLER_LOG", os.path.join(self.tmp, "log.jsonl")),
-                        mock.patch.object(appmod, "RESULTS_DIR", self.tmp),
                         mock.patch.object(appmod.hub, "spawn", lambda *a, **k: None)]
         for p in self.patches:
             p.start()
