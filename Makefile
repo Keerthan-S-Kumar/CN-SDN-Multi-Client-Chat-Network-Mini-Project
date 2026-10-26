@@ -13,6 +13,9 @@ topo:
 server:
 	python3 chat/server.py --host 0.0.0.0
 
+web-chat:
+	python3 chat/web_gateway.py --server $(or $(SERVER),10.0.0.1) --port 8000
+
 mock:
 	python3 tools/mock_controller.py
 
@@ -38,4 +41,4 @@ test:
 	$(PY) -m unittest controller.test_logic -v
 	@if ls tests/test_*.py >/dev/null 2>&1; then python3 -m unittest discover -s tests -v; fi
 
-.PHONY: controller topo server mock flows meters queues metrics experiments report test
+.PHONY: web-chat controller topo server mock flows meters queues metrics experiments report test

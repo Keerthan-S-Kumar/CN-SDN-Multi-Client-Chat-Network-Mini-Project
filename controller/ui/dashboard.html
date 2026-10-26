@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SDN chat controller</title>
+<style>
+  :root {
+    --ground: #eef2f5; --panel: #ffffff; --ink: #12263a; --muted: #566879; --rule: #d3dce4;
+    --allow: #0b7a78; --vip: #4a3fd0; --throttle: #a85f00; --block: #b32f2f; --heavy: #86389f;
+    --ok: #1d8548; --track: #dfe6ec; --focus: #1b6fd1;
+    --allow-bg: #dff1f0; --vip-bg: #e7e5fa; --throttle-bg: #faecd5; --block-bg: #f7dfdf; --heavy-bg: #f1e2f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0e1a26; --panel: #14243a; --ink: #e6eef6; --muted: #9fb2c4; --rule: #2a3d54;
+      --allow: #46c2bf; --vip: #9d95ff; --throttle: #f0a63c; --block: #ff8585; --heavy: #d594ec;
+      --ok: #5fd08a; --track: #223650; --focus: #6fb0ff;
+      --allow-bg: #12383b; --vip-bg: #25255a; --throttle-bg: #41300f; --block-bg: #471d22; --heavy-bg: #35224a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink);
+         font: 16px/1.45 "Avenir Next", "Segoe UI", system-ui, sans-serif; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  main { max-width: 1240px; margin: 0 auto; padding: 20px 24px 40px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 20px; margin-bottom: 18px; }
+  h1 { font-size: 1.5rem; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  .meta { color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: center; }
+  .mode { font-weight: 650; padding: 2px 10px; border-radius: 999px; background: var(--allow-bg); color: var(--allow); }
+  .mode.baseline { background: var(--throttle-bg); color: var(--throttle); }
+  .live { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); }
+  .live.down .dot { background: var(--block); }
+  .live.down { color: var(--block); font-weight: 600; }
+
+  section { background: var(--panel); border-top: 3px solid var(--ink); padding: 16px 18px 18px; }
+  .stack { display: grid; gap: 18px; }
+
+  /* the server link: the one thing on the page that is drawn rather than listed */
+  .link { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 8px 28px; align-items: end; }
+  .link h2 { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
+  .link h2 span { color: var(--muted); font-weight: 400; font-size: .95rem; }
+  .pct { font-size: 3.2rem; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+  .pct small { font-size: 1.1rem; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-left: 8px; }
+  .state { margin: 6px 0 12px; font-weight: 600; }
+  .state.hot { color: var(--throttle); }
+  svg { display: block; width: 100%; height: auto; }
+  .bar-fill { transition: width .5s ease, fill .3s; }
+  @media (prefers-reduced-motion: reduce) { .bar-fill { transition: none; } }
+  .axis { fill: var(--muted); font-size: 11px; }
+
+  dl.stats { display: flex; flex-wrap: wrap; margin: 0; }
+  dl.stats div { padding: 4px 22px 4px 0; margin-right: 22px; border-right: 1px solid var(--rule); }
+  dl.stats div:last-child { border-right: 0; margin-right: 0; }
+  dl.stats dt { color: var(--muted); font-size: .85rem; }
+  dl.stats dd { margin: 0; font-size: 1.35rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+  .grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 600; color: var(--muted); font-size: .85rem; padding: 0 8px 6px 0; border-bottom: 1px solid var(--rule); }
+  td { padding: 8px 8px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  td.ip { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .92rem; white-space: nowrap; }
+  .chip { display: inline-block; font-size: .82rem; font-weight: 600; padding: 1px 9px; border-radius: 999px; margin: 0 4px 3px 0; }
+  .chip.allow { background: var(--allow-bg); color: var(--allow); }
+  .chip.vip { background: var(--vip-bg); color: var(--vip); }
+  .chip.throttle { background: var(--throttle-bg); color: var(--throttle); }
+  .chip.block { background: var(--block-bg); color: var(--block); }
+  .chip.heavy { background: var(--heavy-bg); color: var(--heavy); }
+  .empty { color: var(--muted); margin: 6px 0 0; }
+  .rooms, .links { list-style: none; margin: 0; padding: 0; }
+  .rooms li, .links li { padding: 7px 0; border-bottom: 1px solid var(--rule); display: flex; gap: 10px; justify-content: space-between; }
+  .up { color: var(--ok); font-weight: 600; }
+  .downlink { color: var(--block); font-weight: 650; }
+
+  ol.feed { list-style: none; margin: 0; padding: 0; max-height: 560px; overflow: auto; }
+  ol.feed li { display: grid; grid-template-columns: 4.6rem 7.6rem 1fr; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--rule); }
+  ol.feed time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .9rem; }
+  .tag { font-size: .82rem; font-weight: 650; }
+  .tag.app { color: var(--vip); } .tag.net { color: var(--allow); }
+  .tag.policy { color: var(--throttle); } .tag.fail { color: var(--block); }
+
+  @media (max-width: 900px) {
+    .link, .grid { grid-template-columns: 1fr; }
+    .live { margin-left: 0; }
+    ol.feed li { grid-template-columns: 4.2rem 1fr; }
+    ol.feed li .tag { grid-column: 2; }
+    ol.feed li span:last-child { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>SDN chat controller</h1>
+    <div class="meta">
+      <span id="mode" class="mode">...</span>
+      <span id="topo">Waiting for the controller</span>
+    </div>
+    <div id="live" class="live down" role="status" aria-live="polite"><span class="dot"></span><span id="livetext">Connecting</span></div>
+  </header>
+
+  <div class="stack">
+    <section class="link" aria-labelledby="linkh">
+      <h2 id="linkh">Server link <span>switch s1, port 1, towards the chat server (capped at 10 Mbps)</span></h2>
+      <div>
+        <div class="pct"><span id="pct">0</span>%<small id="mbps">0.0 of 10 Mbps</small></div>
+        <div class="state" id="cstate">Normal</div>
+        <svg viewBox="0 0 600 62" role="img" aria-label="Link utilisation bar with congestion thresholds">
+          <rect x="0" y="6" width="600" height="22" rx="11" fill="var(--track)"></rect>
+          <rect id="barfill" class="bar-fill" x="0" y="6" width="0" height="22" rx="11" fill="var(--allow)"></rect>
+          <line x1="300" y1="2" x2="300" y2="34" stroke="var(--ink)" stroke-width="1.5"></line>
+          <line x1="480" y1="2" x2="480" y2="34" stroke="var(--ink)" stroke-width="1.5"></line>
+          <text class="axis" x="300" y="50" text-anchor="middle">below 50% clears</text>
+          <text class="axis" x="480" y="50" text-anchor="middle">80% means congested</text>
+        </svg>
+      </div>
+      <div>
+        <svg viewBox="0 0 300 62" role="img" aria-label="Utilisation over the last 90 seconds">
+          <line x1="0" x2="300" y1="12.4" y2="12.4" stroke="var(--throttle)" stroke-dasharray="4 4"></line>
+          <line x1="0" x2="300" y1="31" y2="31" stroke="var(--rule)" stroke-dasharray="4 4"></line>
+          <polyline id="spark" fill="none" stroke="var(--ink)" stroke-width="2" points=""></polyline>
+          <text class="axis" x="0" y="60">90 s ago</text><text class="axis" x="300" y="60" text-anchor="end">now</text>
+        </svg>
+      </div>
+    </section>
+
+    <section aria-label="Totals">
+      <dl class="stats">
+        <div><dt>Hosts allowed</dt><dd id="s-hosts">0</dd></div>
+        <div><dt>Rooms</dt><dd id="s-rooms">0</dd></div>
+        <div><dt>Throttled</dt><dd id="s-thr">0</dd></div>
+        <div><dt>Blocked</dt><dd id="s-blk">0</dd></div>
+        <div><dt>Packets dropped at the gate</dt><dd id="s-drop">0</dd></div>
+        <div><dt>Last rule install</dt><dd id="s-inst">-</dd></div>
+        <div><dt>Last reroute</dt><dd id="s-rer">-</dd></div>
+      </dl>
+    </section>
+
+    <div class="grid">
+      <div class="stack">
+        <section aria-labelledby="hostsh">
+          <h2 id="hostsh">Hosts and their policy</h2>
+          <div id="hosts"></div>
+        </section>
+        <section aria-labelledby="roomsh">
+          <h2 id="roomsh">Rooms</h2>
+          <div id="rooms"></div>
+        </section>
+        <section id="linksec" aria-labelledby="linksh" hidden>
+          <h2 id="linksh">Switch links</h2>
+          <ul class="links" id="links"></ul>
+        </section>
+      </div>
+      <section aria-labelledby="feedh">
+        <h2 id="feedh">What just happened</h2>
+        <ol class="feed" id="feed"></ol>
+        <p class="empty" id="feedempty">No events yet. Start the chat server and register a user.</p>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var BOTTLENECK_MBPS = 10, HISTORY = 90;
+  var hist = [], failures = 0, last = {};
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) {
+    return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]; }); }
+  function ms(v) { return (v === undefined || v === null || v === 0) ? "-" : v.toFixed(1) + " ms"; }
+  function clock(t) { return new Date(t * 1000).toTimeString().slice(0, 8); }
+  function get(url) {
+    return fetch(url, {cache: "no-store"}).then(function (r) {
+      if (!r.ok) { throw new Error(url + " " + r.status); }
+      return r.json();
+    });
+  }
+
+  function describe(e) {
+    var d = e.detail || {}, link = d.link ? "s" + d.link[0] + " to s" + d.link[1] : "";
+    switch (e.kind) {
+      case "event_rx":
+        return {cls: "app", tag: "Chat server", text: (d.event || "event") + (d.user ? " " + d.user : "") +
+          (d.room ? " in " + d.room : "") + " from " + (d.ip || "?")};
+      case "flow_install":
+        return {cls: "net", tag: "Rules installed", text: "after " + d.trigger + ": every switch confirmed in " + ms(d.ms)};
+      case "link_down": return {cls: "fail", tag: "Link failure", text: "link " + link + " went down"};
+      case "link_up": return {cls: "net", tag: "Link restored", text: "link " + link + " is back"};
+      case "reroute_done": return {cls: "net", tag: "Rerouted", text: "traffic moved to another path in " + ms(d.ms)};
+      case "congestion_on": return {cls: "fail", tag: "Congestion", text: "server link above 80% (" + Math.round((d.util || 0) * 100) + "%)"};
+      case "congestion_off": return {cls: "net", tag: "Congestion over", text: "server link back under 50%"};
+      case "heavy_on": return {cls: "policy", tag: "Metering", text: d.ip + " is the heaviest sender and is now rate limited"};
+      case "heavy_off": return {cls: "net", tag: "Metering off", text: d.ip + " is no longer rate limited"};
+      case "throttle_on": return {cls: "policy", tag: "Spam throttle", text: d.ip + " flagged for spam and throttled"};
+      case "throttle_off": return {cls: "net", tag: "Throttle off", text: d.ip + " was quiet long enough and is released"};
+      case "block_on": return {cls: "fail", tag: "Blocked", text: d.ip + " is blocked from every chat port"};
+      case "block_off": return {cls: "net", tag: "Unblocked", text: d.ip + " may connect again"};
+      case "host_moved": return {cls: "net", tag: "Host moved", text: d.mac + " now at switch " + (d.at || []).join(" port ")};
+      default: return {cls: "net", tag: e.kind, text: JSON.stringify(d)};
+    }
+  }
+
+  function chips(ip, rules) {
+    var out = [];
+    if ((rules.allow || []).indexOf(ip) >= 0) { out.push('<span class="chip allow">Allowed</span>'); }
+    if ((rules.vip || []).indexOf(ip) >= 0) { out.push('<span class="chip vip">VIP queue</span>'); }
+    if ((rules.throttle || []).indexOf(ip) >= 0) { out.push('<span class="chip throttle">Throttled</span>'); }
+    if ((rules.heavy || []).indexOf(ip) >= 0) { out.push('<span class="chip heavy">Rate limited</span>'); }
+    if ((rules.block || []).indexOf(ip) >= 0) { out.push('<span class="chip block">Blocked</span>'); }
+    return out.join("") || '<span class="empty">no rules</span>';
+  }
+
+  function renderLink(m) {
+    var util = Math.max(0, m.util || 0), shown = Math.min(util, 1);
+    $("pct").textContent = Math.round(util * 100);
+    $("mbps").textContent = (util * BOTTLENECK_MBPS).toFixed(1) + " of " + BOTTLENECK_MBPS + " Mbps";
+    var bar = $("barfill");
+    bar.setAttribute("width", String(600 * shown));
+    bar.setAttribute("fill", m.congested ? "var(--throttle)" : "var(--allow)");
+    var st = $("cstate");
+    if (m.congested) {
+      var h = (m.heavy || []).length ? ": metering " + m.heavy.join(", ") : "";
+      st.textContent = "Congested" + h;
+      st.className = "state hot";
+    } else {
+      st.textContent = m.mode === "baseline" ? "Baseline: no reaction to load" : "Normal";
+      st.className = "state";
+    }
+    hist.push(util);
+    if (hist.length > HISTORY) { hist.shift(); }
+    var pts = hist.map(function (v, i) {
+      var x = hist.length === 1 ? 300 : (i / (HISTORY - 1)) * 300 + (300 - ((hist.length - 1) / (HISTORY - 1)) * 300);
+      return x.toFixed(1) + "," + (52 - Math.min(v, 1.1) * 40 / 1.0).toFixed(1);
+    });
+    $("spark").setAttribute("points", pts.join(" "));
+  }
+
+  function render(state, m, snap, events) {
+    var registered = state.registered || {}, rules = snap.rules || {};
+    $("mode").textContent = m.mode === "baseline" ? "Baseline" : "SDN mode";
+    $("mode").className = "mode" + (m.mode === "baseline" ? " baseline" : "");
+    var sw = (snap.switches || []).length;
+    $("topo").textContent = (snap.topology === "triangle" ? "Triangle of 3 switches" : "Single switch") +
+      ", " + sw + " connected";
+
+    renderLink(m);
+
+    var ips = Object.keys(registered);
+    ["throttle", "block", "heavy"].forEach(function (c) {
+      (rules[c] || []).forEach(function (ip) { if (ips.indexOf(ip) < 0) { ips.push(ip); } });
+    });
+    ips.sort();
+    var roomMap = state.rooms || {}, roomNames = Object.keys(roomMap);
+    $("s-hosts").textContent = (rules.allow || []).length;
+    $("s-rooms").textContent = roomNames.length;
+    $("s-thr").textContent = (rules.throttle || []).length;
+    $("s-blk").textContent = (m.blocked || []).length;
+    $("s-drop").textContent = m.drop_hits || 0;
+    $("s-inst").textContent = ms(m.last_flow_install_ms);
+    $("s-rer").textContent = ms(m.last_reroute_ms);
+
+    $("hosts").innerHTML = ips.length
+      ? "<table><thead><tr><th>Host</th><th>User</th><th>Policy on the switch</th></tr></thead><tbody>" +
+        ips.map(function (ip) {
+          return '<tr><td class="ip">' + esc(ip) + "</td><td>" + esc(registered[ip] || "-") + "</td><td>" + chips(ip, rules) + "</td></tr>";
+        }).join("") + "</tbody></table>"
+      : '<p class="empty">No hosts yet. Register a client and its rules appear here.</p>';
+
+    $("rooms").innerHTML = roomNames.length
+      ? '<ul class="rooms">' + roomNames.sort().map(function (r) {
+          return "<li><strong>" + esc(r) + "</strong><span>" + roomMap[r].map(esc).join(", ") + "</span></li>";
+        }).join("") + "</ul>"
+      : '<p class="empty">No rooms yet. They appear when a user joins one.</p>';
+
+    var tri = snap.topology === "triangle";
+    $("linksec").hidden = !tri;
+    if (tri) {
+      var down = (m.links_down || []).map(function (l) { return l.join("-"); });
+      $("links").innerHTML = (snap.links || []).map(function (l) {
+        var isdown = down.indexOf(l.join("-")) >= 0;
+        return "<li><span>s" + l[0] + " to s" + l[1] + '</span><span class="' + (isdown ? "downlink" : "up") + '">' +
+          (isdown ? "Down: traffic rerouted" : "Up") + "</span></li>";
+      }).join("");
+    }
+
+    var ev = (events || []).slice().reverse();
+    $("feedempty").hidden = ev.length > 0;
+    $("feed").innerHTML = ev.map(function (e) {
+      var d = describe(e);
+      return "<li><time>" + clock(e.t) + '</time><span class="tag ' + d.cls + '">' + esc(d.tag) + "</span><span>" + esc(d.text) + "</span></li>";
+    }).join("");
+  }
+
+  function setLive(ok, text) {
+    $("live").className = "live" + (ok ? "" : " down");
+    $("livetext").textContent = text;
+  }
+
+  function tick() {
+    Promise.all([get("/state"), get("/metrics"), get("/snapshot"), get("/events?n=40")]).then(function (r) {
+      failures = 0;
+      last = {state: r[0], m: r[1], snap: r[2], ev: r[3]};
+      render(r[0], r[1], r[2], r[3]);
+      setLive(true, "Live, updated " + new Date().toTimeString().slice(0, 8));
+    }).catch(function () {
+      failures += 1;
+      setLive(false, "Controller not reachable, retrying");
+    }).then(function () { setTimeout(tick, 1000); });
+  }
+  tick();
+})();
+</script>
+</body>
+</html>
