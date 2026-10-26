@@ -13,6 +13,7 @@ Course: Computer Networks (UE25CS243A), SDN-Socket Programming mini project.
 | [`docs/interfaces.md`](docs/interfaces.md) | The frozen contract: ports, message formats, events, flow rows |
 | [`docs/eval-plan.md`](docs/eval-plan.md) | Scenarios, metrics and result formats |
 | [`docs/part-a.md`](docs/part-a.md) | Part A: chat server, client, bots, spam detection, analysis scripts |
+| [`docs/ui.md`](docs/ui.md) | Live SDN dashboard (`/ui`) and browser chat client (`make web-chat`) |
 
 ## Team
 

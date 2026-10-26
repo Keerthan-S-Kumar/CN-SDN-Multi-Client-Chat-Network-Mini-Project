@@ -70,6 +70,11 @@ class ChatSdn(app_manager.RyuApp):
         self.last_reroute_ms = 0.0
         os.makedirs(RESULTS_DIR, exist_ok=True)
         kwargs["wsgi"].register(Api, {APP_KEY: self})
+        try:                                       # dashboard is optional: it must never break the event API
+            from controller.ui_api import UiApi
+            kwargs["wsgi"].register(UiApi, {APP_KEY: self})
+        except Exception as e:                     # noqa: BLE001
+            self.logger.warning("dashboard disabled: %s", e)
         if self.sdn:
             hub.spawn(self._monitor_loop)
         self.logger.info("ChatSdn started in %s mode", self.mode)
@@ -97,6 +102,16 @@ class ChatSdn(app_manager.RyuApp):
                 "drop_hits": sum(self.drop_hits_by_dp.values()),
                 "last_flow_install_ms": round(self.last_flow_install_ms, 3),
                 "last_reroute_ms": round(self.last_reroute_ms, 3)}
+
+    def snapshot(self):
+        """Everything the dashboard needs that /state and /metrics do not already say."""
+        return {"mode": self.mode,
+                "topology": "triangle" if self.is_triangle() else "single",
+                "switches": sorted(self.dps),
+                "rules": {c: sorted(ips) for c, ips in self.installed.items()},
+                "hosts": {mac: list(loc) for mac, loc in self.hosts.items()},
+                "bottleneck_bps": BOTTLENECK_BPS,
+                "links": [sorted((a, b)) for a, _, b, _ in TRIANGLE_LINKS]}
 
     def last_user(self, ip):
         return sorted(self.sessions[ip])[-1] if self.sessions.get(ip) else None
