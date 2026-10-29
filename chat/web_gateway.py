@@ -14,13 +14,15 @@ import secrets
 import socket
 import threading
 import time
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from chat.protocol import recv_msg, send_msg
-from common.constants import PORT_CONTROL, PORT_PM, PORT_ROOM
+from common.constants import CONTROLLER_URL, PORT_CONTROL, PORT_PM, PORT_ROOM
 
 PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web", "index.html")
+CONTROLLER = CONTROLLER_URL     # where /snapshot and /metrics are read for the network card
 IDLE_SECONDS = 45          # a session with no browser polling it for this long is closed
 
 
@@ -131,6 +133,25 @@ def reaper():
             dead = [k for k, s in SESSIONS.items() if now - s.touched > IDLE_SECONDS or s.closed]
             for k in dead:
                 SESSIONS.pop(k).close()
+
+
+def fetch_json(path):
+    with urllib.request.urlopen(CONTROLLER.rstrip("/") + path, timeout=1.0) as r:
+        return json.load(r)
+
+
+def network_view(ip):
+    """What the SDN controller currently does to traffic from `ip`. Never raises: the card just says unavailable."""
+    try:
+        snap, met = fetch_json("/snapshot"), fetch_json("/metrics")
+    except Exception:
+        return {"available": False, "ip": ip}
+    rules = snap.get("rules", {})
+    return {"available": True, "ip": ip, "mode": met.get("mode"),
+            "allowed": ip in rules.get("allow", []), "vip": ip in rules.get("vip", []),
+            "throttled": ip in rules.get("throttle", []), "heavy": ip in rules.get("heavy", []),
+            "blocked": ip in rules.get("block", []), "util": met.get("util", 0),
+            "congested": bool(met.get("congested"))}
 
 
 def make_handler(server_ip):
@@ -253,6 +274,9 @@ def make_handler(server_ip):
                 if path == "/api/pm":
                     s.send(s.pm_sock, "MSG_PM", to=str(d.get("to", "")), text=str(d.get("text", "")))
                     return self._json({"ok": True})
+                if path == "/api/net":
+                    ip = s.ctl.getsockname()[0] if s.ctl else ""
+                    return self._json(dict(network_view(ip), ok=True))
                 if path == "/api/logout":
                     with SESSIONS_LOCK:
                         SESSIONS.pop(str(d.get("sid", "")), None)
@@ -273,11 +297,14 @@ def serve(server_ip, host="0.0.0.0", port=8000):
 
 
 def main():
+    global CONTROLLER
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--server", default="10.0.0.1", help="chat server address (default 10.0.0.1)")
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--port", type=int, default=8000)
+    ap.add_argument("--controller", default=CONTROLLER, help="controller REST URL for the network card")
     a = ap.parse_args()
+    CONTROLLER = a.controller
     httpd = serve(a.server, a.host, a.port)
     print(f"web chat on http://localhost:{a.port}  ->  chat server {a.server}")
     try:

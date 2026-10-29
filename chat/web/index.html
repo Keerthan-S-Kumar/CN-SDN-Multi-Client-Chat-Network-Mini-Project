@@ -5,104 +5,238 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chat network</title>
 <style>
-  :root { --ground:#eef2f5; --panel:#fff; --ink:#12263a; --muted:#566879; --rule:#d3dce4; --accent:#0b7a78; --accent-ink:#fff;
-          --mine:#dff1f0; --pm:#e7e5fa; --pm-ink:#4a3fd0; --err:#b32f2f; --focus:#1b6fd1; }
-  @media (prefers-color-scheme: dark) {
-    :root { --ground:#0e1a26; --panel:#14243a; --ink:#e6eef6; --muted:#9fb2c4; --rule:#2a3d54; --accent:#46c2bf; --accent-ink:#06222a;
-            --mine:#12383b; --pm:#25255a; --pm-ink:#b3adff; --err:#ff8585; --focus:#6fb0ff; }
+  :root {
+    --ground:#eef2f5; --panel:#ffffff; --ink:#12263a; --muted:#566879; --rule:#d9e1e8;
+    --rail:#0f2236; --rail-ink:#e6eef6; --rail-muted:#8ea3b8; --rail-hover:#1b3550; --rail-on:#26496b;
+    --accent:#0b7a78; --accent-ink:#ffffff; --accent-soft:#dff1f0;
+    --pm:#4a3fd0; --pm-soft:#e7e5fa; --warn:#a85f00; --warn-soft:#faecd5; --bad:#b32f2f; --bad-soft:#f7dfdf; --ok:#1d8548;
+    --mine:#0b7a78; --focus:#1b6fd1; --shadow:0 1px 2px rgba(15,34,54,.08);
   }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; }
-  body { margin:0; background:var(--ground); color:var(--ink); font:16px/1.45 "Avenir Next","Segoe UI",system-ui,sans-serif; }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:#0b1622; --panel:#12233a; --ink:#e6eef6; --muted:#9fb2c4; --rule:#25384f;
+      --rail:#08121c; --rail-ink:#e6eef6; --rail-muted:#8ea3b8; --rail-hover:#14263a; --rail-on:#1f3d5c;
+      --accent:#46c2bf; --accent-ink:#06222a; --accent-soft:#12383b;
+      --pm:#a9a2ff; --pm-soft:#25255a; --warn:#f0a63c; --warn-soft:#41300f; --bad:#ff8585; --bad-soft:#471d22; --ok:#5fd08a;
+      --mine:#46c2bf; --focus:#6fb0ff; --shadow:none;
+    }
+  }
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  body { margin:0; background:var(--ground); color:var(--ink); font:15px/1.45 "Avenir Next","Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
   :focus-visible { outline:3px solid var(--focus); outline-offset:2px; }
   [hidden] { display:none !important; }
-  button, input { font:inherit; color:inherit; }
-  input { background:var(--panel); border:1px solid var(--rule); border-radius:6px; padding:9px 11px; width:100%; }
-  button { cursor:pointer; border:1px solid var(--rule); background:var(--panel); border-radius:6px; padding:8px 14px; }
-  button.primary { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:650; }
-  .err { color:var(--err); font-weight:600; min-height:1.4em; margin:8px 0 0; }
+  button, input, textarea { font:inherit; color:inherit; }
+  button { cursor:pointer; }
+  input, textarea { background:var(--panel); border:1px solid var(--rule); border-radius:10px; padding:10px 12px; width:100%; }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
 
-  #login { max-width:400px; margin:9vh auto; padding:24px; background:var(--panel); border-top:3px solid var(--ink); }
-  #login h1 { margin:0 0 4px; font-size:1.5rem; letter-spacing:-.01em; }
-  #login p { margin:0 0 16px; color:var(--muted); }
-  #login label { display:block; margin:12px 0 4px; font-weight:600; }
-  #login .row { display:flex; gap:10px; margin-top:18px; }
-  #login .row button { flex:1; }
+  /* ---------- sign in ---------- */
+  #login { min-height:100%; display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); }
+  .brand { background:var(--rail); color:var(--rail-ink); padding:56px 56px 40px; display:flex; flex-direction:column; justify-content:space-between; gap:32px; }
+  .brand h1 { font-size:2.6rem; line-height:1.05; margin:0 0 14px; letter-spacing:-.03em; max-width:12ch; }
+  .brand p { color:var(--rail-muted); max-width:38ch; margin:0; font-size:1.05rem; }
+  .brand svg { width:100%; max-width:520px; height:auto; }
+  .brand .legend { color:var(--rail-muted); font-size:.9rem; margin:0; }
+  .formside { display:flex; align-items:center; justify-content:center; padding:32px; }
+  #lform { width:100%; max-width:380px; }
+  #lform h2 { margin:0 0 4px; font-size:1.4rem; letter-spacing:-.01em; }
+  #lform .sub { margin:0 0 20px; color:var(--muted); }
+  #lform label { display:block; margin:14px 0 5px; font-weight:600; font-size:.92rem; }
+  .actions { display:flex; gap:10px; margin-top:22px; }
+  .btn { border:1px solid var(--rule); background:var(--panel); border-radius:10px; padding:10px 16px; font-weight:600; }
+  .btn.primary { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+  .actions .btn { flex:1; }
+  .err { color:var(--bad); font-weight:600; min-height:1.4em; margin:10px 0 0; }
 
-  #app { height:100%; display:grid; grid-template-columns:260px 1fr; grid-template-rows:1fr auto; }
-  aside { background:var(--panel); border-right:1px solid var(--rule); padding:14px; overflow:auto; }
-  aside h2 { font-size:.95rem; margin:18px 0 6px; color:var(--muted); font-weight:600; }
-  aside h2:first-of-type { margin-top:0; }
-  .me { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:14px; }
-  .me strong { overflow:hidden; text-overflow:ellipsis; }
-  .me button { padding:3px 10px; }
-  ul.nav { list-style:none; margin:0; padding:0; }
-  ul.nav button { width:100%; text-align:left; border:0; border-radius:6px; padding:7px 10px; background:transparent; display:flex; justify-content:space-between; gap:6px; }
-  ul.nav button[aria-current="true"] { background:var(--mine); font-weight:650; }
-  ul.nav .n { background:var(--accent); color:var(--accent-ink); border-radius:999px; font-size:.8rem; padding:0 7px; font-weight:650; }
-  .join { display:flex; gap:6px; margin-top:8px; }
-  .join button { padding:8px 12px; }
-  .hint { color:var(--muted); font-size:.9rem; margin:4px 0; }
+  /* ---------- app shell ---------- */
+  #app { height:100%; display:grid; grid-template-columns:280px minmax(0,1fr) 300px; grid-template-rows:minmax(0,1fr); }
+  aside.rail { background:var(--rail); color:var(--rail-ink); display:flex; flex-direction:column; min-height:0; }
+  .rail .top { padding:16px 16px 10px; display:flex; align-items:center; gap:10px; }
+  .logo { width:32px; height:32px; border-radius:9px; background:var(--accent); color:var(--accent-ink); display:grid; place-items:center; flex:none; }
+  .rail .top strong { font-size:1.05rem; letter-spacing:-.01em; }
+  .scroll { overflow:auto; padding:6px 10px 12px; flex:1; min-height:0; }
+  .rail h2 { font-size:.82rem; font-weight:650; color:var(--rail-muted); margin:16px 8px 6px; }
+  .nav { list-style:none; margin:0; padding:0; }
+  .nav button { width:100%; display:flex; align-items:center; gap:9px; padding:7px 8px; border:0; background:transparent; color:inherit; border-radius:8px; text-align:left; }
+  .nav button:hover { background:var(--rail-hover); }
+  .nav button[aria-current="true"] { background:var(--rail-on); font-weight:650; }
+  .nav .name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hash { width:22px; text-align:center; color:var(--rail-muted); font-weight:700; }
+  .badge { background:var(--accent); color:var(--accent-ink); border-radius:999px; font-size:.78rem; font-weight:700; padding:0 7px; min-width:20px; text-align:center; }
+  .joinbox { display:flex; gap:6px; margin:8px 6px 0; }
+  .joinbox input { background:var(--rail-hover); border-color:transparent; color:var(--rail-ink); padding:8px 10px; }
+  .joinbox input::placeholder { color:var(--rail-muted); }
+  .joinbox button { border:0; border-radius:10px; padding:0 14px; background:var(--accent); color:var(--accent-ink); font-weight:650; }
+  .rail .empty { color:var(--rail-muted); margin:4px 8px; font-size:.9rem; }
+  .me { padding:12px 14px; border-top:1px solid var(--rail-hover); display:flex; align-items:center; gap:10px; }
+  .me .who { flex:1; min-width:0; }
+  .me .who strong { display:block; overflow:hidden; text-overflow:ellipsis; }
+  .me .who span { color:var(--rail-muted); font-size:.85rem; }
+  .me button { border:1px solid var(--rail-on); background:transparent; color:inherit; border-radius:8px; padding:4px 10px; }
+  .av { width:34px; height:34px; border-radius:11px; color:#fff; display:grid; place-items:center; font-weight:700; flex:none; font-size:.95rem; position:relative; }
+  .av.sm { width:24px; height:24px; border-radius:8px; font-size:.78rem; }
+  .dot { position:absolute; right:-3px; bottom:-3px; width:10px; height:10px; border-radius:50%; background:var(--ok); border:2px solid var(--rail); }
 
-  main { display:flex; flex-direction:column; min-height:0; }
-  #title { padding:12px 18px; background:var(--panel); border-bottom:1px solid var(--rule); }
-  #title h1 { margin:0; font-size:1.1rem; }
-  #title small { color:var(--muted); }
-  #thread { flex:1; overflow:auto; padding:16px 18px; display:flex; flex-direction:column; gap:8px; }
-  .m { max-width:min(640px,88%); background:var(--panel); padding:7px 12px; border-radius:10px; border:1px solid var(--rule); }
-  .m.me { align-self:flex-end; background:var(--mine); }
-  .m.pm { background:var(--pm); }
-  .m .who { font-size:.85rem; font-weight:650; color:var(--muted); }
-  .m.pm .who { color:var(--pm-ink); }
-  .m .t { white-space:pre-wrap; overflow-wrap:anywhere; }
-  .m.sys { align-self:center; background:transparent; border:0; color:var(--muted); font-size:.9rem; }
-  .m.bad { align-self:center; background:transparent; border:1px solid var(--err); color:var(--err); font-size:.92rem; }
-  .empty { margin:auto; color:var(--muted); text-align:center; max-width:34ch; }
-  form#send { display:flex; gap:8px; padding:12px 18px; background:var(--panel); border-top:1px solid var(--rule); }
-  #conn { grid-column:1 / -1; padding:6px 18px; font-size:.88rem; color:var(--muted); border-top:1px solid var(--rule); background:var(--panel); }
-  #conn.down { color:var(--err); font-weight:600; }
+  main { display:flex; flex-direction:column; min-width:0; min-height:0; background:var(--ground); }
+  header.bar { background:var(--panel); border-bottom:1px solid var(--rule); padding:12px 20px; display:flex; align-items:center; gap:12px; box-shadow:var(--shadow); }
+  header.bar .t { min-width:0; flex:1; }
+  header.bar h1 { margin:0; font-size:1.1rem; letter-spacing:-.01em; display:flex; align-items:center; gap:8px; }
+  header.bar small { color:var(--muted); }
+  #menu { display:none; border:1px solid var(--rule); background:var(--panel); border-radius:8px; padding:6px 10px; }
+  .pill { font-size:.8rem; font-weight:650; padding:2px 10px; border-radius:999px; }
+  .pill.room { background:var(--accent-soft); color:var(--accent); }
+  .pill.pm { background:var(--pm-soft); color:var(--pm); }
+
+  .alert { margin:12px 20px 0; padding:10px 14px; border-radius:10px; font-weight:600; background:var(--warn-soft); color:var(--warn); }
+  .alert.bad { background:var(--bad-soft); color:var(--bad); }
+
+  .thread-wrap { position:relative; flex:1; min-height:0; }
+  #thread { position:absolute; inset:0; overflow:auto; padding:18px 20px 8px; }
+  .day { text-align:center; margin:14px 0 10px; color:var(--muted); font-size:.85rem; font-weight:600; display:flex; align-items:center; gap:12px; }
+  .day::before, .day::after { content:""; flex:1; height:1px; background:var(--rule); }
+  .msg { display:grid; grid-template-columns:34px minmax(0,1fr); gap:0 12px; padding:2px 0; }
+  .msg.cont { margin-top:-1px; }
+  .msg .av { margin-top:2px; }
+  .msg .gutter { color:transparent; font-size:.72rem; text-align:right; padding-top:5px; }
+  .msg:hover .gutter { color:var(--muted); }
+  .msg .head { display:flex; align-items:baseline; gap:8px; }
+  .msg .head b { font-weight:700; }
+  .msg .head time { color:var(--muted); font-size:.8rem; }
+  .msg .body { white-space:pre-wrap; overflow-wrap:anywhere; max-width:72ch; }
+  .msg.mine .head b { color:var(--accent); }
+  .msg.pm .body { background:var(--pm-soft); padding:6px 10px; border-radius:4px 12px 12px 12px; display:inline-block; }
+  .sys { text-align:center; color:var(--muted); font-size:.88rem; margin:10px 0; }
+  .bad-line { text-align:center; color:var(--bad); font-weight:600; font-size:.9rem; margin:10px 0; }
+  .blank { max-width:36ch; margin:12vh auto 0; text-align:center; color:var(--muted); }
+  .blank svg { width:84px; height:auto; margin-bottom:10px; }
+  .blank h3 { color:var(--ink); margin:0 0 6px; font-size:1.1rem; }
+  #jump { position:absolute; left:50%; bottom:12px; transform:translateX(-50%); background:var(--ink); color:var(--ground); border:0; border-radius:999px; padding:6px 16px; font-weight:650; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+
+  form#send { padding:10px 20px 16px; background:var(--ground); }
+  .composer { background:var(--panel); border:1px solid var(--rule); border-radius:14px; padding:8px 10px 8px 14px; display:flex; flex-direction:column; gap:6px; box-shadow:var(--shadow); }
+  .composer:focus-within { border-color:var(--accent); }
+  .composer textarea { border:0; padding:4px 0; resize:none; max-height:150px; min-height:24px; background:transparent; outline:0; border-radius:0; }
+  .tools { display:flex; align-items:center; gap:2px; }
+  .tools .emo { border:0; background:transparent; font-size:1.15rem; padding:2px 5px; border-radius:6px; }
+  .tools .emo:hover { background:var(--accent-soft); }
+  .tools .hint { margin-left:auto; color:var(--muted); font-size:.8rem; padding-right:8px; }
+  .tools .btn.primary { padding:6px 18px; border-radius:9px; flex:none; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+
+  aside.info { background:var(--panel); border-left:1px solid var(--rule); overflow:auto; padding:16px; min-height:0; }
+  aside.info h2 { font-size:.92rem; margin:0 0 8px; }
+  .people { list-style:none; margin:0 0 20px; padding:0; }
+  .people button { width:100%; display:flex; align-items:center; gap:10px; padding:6px 4px; border:0; background:transparent; border-radius:8px; text-align:left; }
+  .people button:hover { background:var(--accent-soft); }
+  .people .dot { border-color:var(--panel); }
+  .net { border:1px solid var(--rule); border-radius:12px; padding:14px; }
+  .net svg { width:100%; height:auto; display:block; margin-bottom:8px; }
+  .net .row { display:flex; justify-content:space-between; gap:10px; padding:4px 0; border-top:1px solid var(--rule); font-size:.9rem; }
+  .net .row:first-of-type { border-top:0; }
+  .net .row span:first-child { color:var(--muted); }
+  .chip { display:inline-block; font-size:.78rem; font-weight:650; padding:1px 9px; border-radius:999px; margin:0 4px 4px 0; background:var(--accent-soft); color:var(--accent); }
+  .chip.vip { background:var(--pm-soft); color:var(--pm); }
+  .chip.warn { background:var(--warn-soft); color:var(--warn); }
+  .chip.bad { background:var(--bad-soft); color:var(--bad); }
+  .chip.off { background:var(--rule); color:var(--muted); }
+  .note { color:var(--muted); font-size:.85rem; margin:8px 0 0; }
+
+  #conn { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); background:var(--bad); color:#fff; padding:6px 16px; border-radius:999px; font-weight:650; z-index:5; }
+
+  @media (max-width:1100px) { #app { grid-template-columns:260px minmax(0,1fr); } aside.info { display:none; } }
   @media (max-width:760px) {
-    #app { grid-template-columns:1fr; grid-template-rows:auto 1fr auto; }
-    aside { border-right:0; border-bottom:1px solid var(--rule); max-height:36vh; }
+    .tools .hint { display:none; } .tools .btn.primary { margin-left:auto; }
+    #login { grid-template-columns:1fr; } .brand { padding:28px; } .brand h1 { font-size:2rem; } .brand svg { display:none; }
+    #app { grid-template-columns:1fr; }
+    aside.rail { position:fixed; inset:0 18% 0 0; z-index:10; transform:translateX(-102%); transition:transform .2s; }
+    aside.rail.open { transform:none; box-shadow:0 0 0 100vmax rgba(0,0,0,.45); }
+    #menu { display:block; }
   }
+  @media (prefers-reduced-motion: reduce) { aside.rail { transition:none; } }
 </style>
 </head>
 <body>
-<section id="login" aria-labelledby="lh">
-  <h1 id="lh">Chat network</h1>
-  <p>Sign in with the account you use in the terminal client, or create one.</p>
-  <form id="lform">
-    <label for="u">Name</label><input id="u" autocomplete="username" required>
-    <label for="p">Password</label><input id="p" type="password" autocomplete="current-password" required>
-    <div class="row"><button class="primary" type="submit" data-mode="login">Sign in</button><button type="submit" data-mode="register">Create account</button></div>
-    <p class="err" id="lerr" role="alert"></p>
-  </form>
+
+<section id="login" aria-label="Sign in">
+  <div class="brand">
+    <div>
+      <h1>Talk over a network that thinks</h1>
+      <p>Rooms and private messages on a software-defined network. The switch decides who may connect, and how fast.</p>
+    </div>
+    <svg viewBox="0 0 520 150" role="img" aria-label="A client reaches the chat server through a switch controlled by a controller">
+      <g fill="none" stroke="#8ea3b8" stroke-width="2"><path d="M70 100 H220"/><path d="M300 100 H450"/><path d="M260 36 V70" stroke-dasharray="4 4"/></g>
+      <g font-size="13" fill="#e6eef6" text-anchor="middle">
+        <rect x="20" y="78" width="100" height="44" rx="10" fill="#1b3550"/><text x="70" y="105">Your browser</text>
+        <rect x="210" y="70" width="100" height="60" rx="12" fill="#0b7a78"/><text x="260" y="105">Switch</text>
+        <rect x="400" y="78" width="100" height="44" rx="10" fill="#1b3550"/><text x="450" y="105">Chat server</text>
+        <rect x="205" y="6" width="110" height="34" rx="9" fill="#4a3fd0"/><text x="260" y="28">Controller</text>
+      </g>
+    </svg>
+    <p class="legend">Your sign-in is checked by the chat server. Your connection is allowed, queued or limited by the switch.</p>
+  </div>
+  <div class="formside">
+    <form id="lform">
+      <h2>Welcome</h2>
+      <p class="sub">Use your existing account, or create one.</p>
+      <label for="u">Name</label><input id="u" autocomplete="username" required maxlength="32">
+      <label for="p">Password</label><input id="p" type="password" autocomplete="current-password" required>
+      <div class="actions"><button class="btn primary" type="submit" data-mode="login">Sign in</button><button class="btn" type="submit" data-mode="register">Create account</button></div>
+      <p class="err" id="lerr" role="alert"></p>
+    </form>
+  </div>
 </section>
 
 <div id="app" hidden>
-  <aside>
-    <div class="me"><strong id="meName"></strong><button id="out" type="button">Sign out</button></div>
-    <h2>Your rooms</h2>
-    <ul class="nav" id="rooms"></ul>
-    <form class="join" id="jform"><input id="jr" placeholder="Room name" aria-label="Room name" required><button type="submit">Join</button></form>
-    <p class="hint">Joining a room that does not exist creates it.</p>
-    <h2>People online</h2>
-    <ul class="nav" id="people"></ul>
-    <p class="hint" id="nopeople" hidden>Nobody else is online.</p>
+  <aside class="rail" id="rail" aria-label="Rooms and people">
+    <div class="top"><span class="logo" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h13"/></svg></span><strong>Chat network</strong></div>
+    <div class="scroll">
+      <h2>Rooms</h2>
+      <ul class="nav" id="rooms"></ul>
+      <p class="empty" id="noRooms">You are not in any room yet.</p>
+      <form class="joinbox" id="jform"><label class="sr" for="jr">Room name</label><input id="jr" placeholder="Room name" required maxlength="32"><button type="submit">Join</button></form>
+      <h2 id="browseH" hidden>Other rooms</h2>
+      <ul class="nav" id="browse"></ul>
+      <h2>Direct messages</h2>
+      <ul class="nav" id="dms"></ul>
+      <p class="empty" id="noDms">Nobody else is online.</p>
+    </div>
+    <div class="me"><span class="av" id="meAv"></span><div class="who"><strong id="meName"></strong><span id="meSub">Online</span></div><button id="out" type="button">Sign out</button></div>
   </aside>
+
   <main>
-    <div id="title"><h1 id="tt">Pick a room or a person</h1><small id="ts"></small></div>
-    <div id="thread" aria-live="polite"></div>
-    <form id="send"><input id="msg" placeholder="Write a message" aria-label="Message" autocomplete="off" disabled><button class="primary" type="submit" id="sbtn" disabled>Send</button></form>
+    <header class="bar">
+      <button id="menu" type="button" aria-label="Open rooms and people">Menu</button>
+      <div class="t"><h1><span id="tt">Choose a room or a person</span> <span class="pill room" id="tpill" hidden></span></h1><small id="ts"></small></div>
+    </header>
+    <div class="alert" id="netAlert" role="status" hidden></div>
+    <div class="thread-wrap"><div id="thread" aria-live="polite"></div><button id="jump" type="button" hidden>New messages</button></div>
+    <form id="send">
+      <div class="composer">
+        <label class="sr" for="msg">Message</label>
+        <textarea id="msg" rows="1" placeholder="Write a message" disabled maxlength="2000"></textarea>
+        <div class="tools" id="emos"><span class="hint">Enter to send, Shift+Enter for a new line</span><button class="btn primary" type="submit" id="sbtn" disabled>Send</button></div>
+      </div>
+    </form>
   </main>
-  <div id="conn"></div>
+
+  <aside class="info" aria-label="Online people and network">
+    <h2>Online now</h2>
+    <ul class="people" id="online"></ul>
+    <h2>Your network path</h2>
+    <div class="net" id="net"><p class="note">Checking the network...</p></div>
+  </aside>
 </div>
+<div id="conn" role="status" hidden>Connection lost. Trying to reconnect.</div>
 
 <script>
 (function () {
   "use strict";
-  var sid = null, me = null, cur = null, convs = {}, unread = {}, rooms = [], es = null;
+  var sid = null, me = null, cur = null, convs = {}, unread = {}, rooms = [], people = [], allRooms = [], dmExtra = [], es = null, timers = [];
+  var COLORS = ["#0b7a78", "#4a3fd0", "#a85f00", "#b32f2f", "#86389f", "#1d8548", "#1b6fd1", "#7a5b00"];
+  var EMOJI = ["😀", "👍", "🎉", "😂", "❤️", "🚀", "🤔", "🙏"];
   function $(i) { return document.getElementById(i); }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } if (text !== undefined) { e.textContent = text; } return e; }
   function api(path, body) {
     return fetch("/api/" + path, {method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify(Object.assign({sid: sid}, body || {}))}).then(function (r) { return r.json(); });
@@ -119,133 +253,232 @@
     BAD_REQUEST: "The server did not accept that. Check what you typed."
   };
   function say(e) { return WORDS[e.code] || e.msg || e.code || "Something went wrong."; }
+  function color(n) { var h = 0; for (var i = 0; i < n.length; i++) { h = (h * 31 + n.charCodeAt(i)) >>> 0; } return COLORS[h % COLORS.length]; }
+  function avatar(n, small, online) {
+    var a = el("span", "av" + (small ? " sm" : ""), (n[0] || "?").toUpperCase());
+    a.style.background = color(n);
+    if (online) { a.appendChild(el("span", "dot")); }
+    return a;
+  }
+  function hhmm(ts) { return new Date(ts * 1000).toTimeString().slice(0, 5); }
+  function dayKey(ts) { return new Date(ts * 1000).toDateString(); }
+  function dayLabel(ts) {
+    var d = new Date(ts * 1000), t = new Date();
+    if (d.toDateString() === t.toDateString()) { return "Today"; }
+    t.setDate(t.getDate() - 1);
+    return d.toDateString() === t.toDateString() ? "Yesterday" : d.toLocaleDateString(undefined, {day: "numeric", month: "long"});
+  }
 
-  function add(key, cls, who, text) {
-    (convs[key] = convs[key] || []).push({cls: cls, who: who, text: text});
-    if (key !== cur) { unread[key] = (unread[key] || 0) + 1; }
+  /* ---------- conversations ---------- */
+  function add(key, item) {
+    item.ts = item.ts || Date.now() / 1000;
+    (convs[key] = convs[key] || []).push(item);
+    if (item.kind === "pm" && !item.mine && people.indexOf(key.slice(3)) < 0 && dmExtra.indexOf(key.slice(3)) < 0) { dmExtra.push(key.slice(3)); }
+    var counts = item.kind === "msg" || item.kind === "pm";
+    if (key !== cur && counts && !item.mine) { unread[key] = (unread[key] || 0) + 1; }
     drawNav();
-    if (key === cur) { drawThread(); }
+    if (key === cur) { drawThread(false); }
   }
 
-  function drawThread() {
-    var t = $("thread"), list = convs[cur] || [];
+  var stick = true;
+  function drawThread(force) {
+    var t = $("thread"), list = convs[cur] || [], near = t.scrollHeight - t.scrollTop - t.clientHeight < 80;
     t.textContent = "";
-    if (!list.length) {
-      var p = document.createElement("p"); p.className = "empty";
-      p.textContent = cur ? "No messages yet. Say hello." : "Join a room on the left, or choose a person to send a private message.";
-      t.appendChild(p);
+    if (!cur) {
+      var b = el("div", "blank");
+      b.innerHTML = '<svg viewBox="0 0 84 60" aria-hidden="true"><rect x="2" y="4" width="56" height="34" rx="10" fill="var(--accent-soft)"/><rect x="26" y="22" width="56" height="34" rx="10" fill="var(--pm-soft)"/></svg>';
+      b.appendChild(el("h3", "", "Start a conversation"));
+      b.appendChild(el("p", "", "Join a room on the left, or pick someone who is online to send a private message."));
+      t.appendChild(b); return;
     }
+    if (!list.length) {
+      var e = el("div", "blank"); e.appendChild(el("h3", "", cur.indexOf("room:") === 0 ? "No messages yet" : "Say hello"));
+      e.appendChild(el("p", "", "Be the first to write something."));
+      t.appendChild(e); return;
+    }
+    var lastDay = "", prev = null;
     list.forEach(function (m) {
-      var d = document.createElement("div"); d.className = "m " + m.cls;
-      if (m.who) { var w = document.createElement("div"); w.className = "who"; w.textContent = m.who; d.appendChild(w); }
-      var x = document.createElement("div"); x.className = "t"; x.textContent = m.text; d.appendChild(x);
-      t.appendChild(d);
+      if (m.kind === "sys" || m.kind === "bad") {
+        t.appendChild(el("div", m.kind === "sys" ? "sys" : "bad-line", m.text)); prev = null; return;
+      }
+      var dk = dayKey(m.ts);
+      if (dk !== lastDay) { t.appendChild(el("div", "day", dayLabel(m.ts))); lastDay = dk; prev = null; }
+      var cont = prev && prev.who === m.who && prev.kind === m.kind && m.ts - prev.ts < 300;
+      var row = el("div", "msg" + (cont ? " cont" : "") + (m.mine ? " mine" : "") + (m.kind === "pm" ? " pm" : ""));
+      if (cont) { row.appendChild(el("span", "gutter", hhmm(m.ts))); }
+      else { row.appendChild(avatar(m.who)); }
+      var col = el("div");
+      if (!cont) {
+        var h = el("div", "head"); h.appendChild(el("b", "", m.mine ? "You" : m.who)); h.appendChild(el("time", "", hhmm(m.ts)));
+        if (m.kind === "pm") { h.appendChild(el("span", "pill pm", "private")); }
+        col.appendChild(h);
+      }
+      col.appendChild(el("div", "body", m.text));
+      row.appendChild(col); t.appendChild(row); prev = m;
     });
-    t.scrollTop = t.scrollHeight;
+    if (force || near) { t.scrollTop = t.scrollHeight; $("jump").hidden = true; } else { $("jump").hidden = false; }
   }
 
-  function navItem(ul, key, label) {
-    var li = document.createElement("li"), b = document.createElement("button");
-    b.type = "button"; b.setAttribute("aria-current", key === cur ? "true" : "false");
-    var s = document.createElement("span"); s.textContent = label; b.appendChild(s);
-    if (unread[key]) { var n = document.createElement("span"); n.className = "n"; n.textContent = unread[key]; b.appendChild(n); }
-    b.onclick = function () { open(key); };
+  /* ---------- sidebar ---------- */
+  function navItem(ul, key, label, opts) {
+    var li = el("li"), b = el("button"); b.type = "button"; b.setAttribute("aria-current", key === cur ? "true" : "false");
+    if (opts.hash) { b.appendChild(el("span", "hash", "#")); } else { b.appendChild(avatar(label, true, opts.online)); }
+    b.appendChild(el("span", "name", label));
+    if (unread[key]) { b.appendChild(el("span", "badge", String(unread[key]))); }
+    b.onclick = opts.onclick || function () { openConv(key); closeRail(); };
     li.appendChild(b); ul.appendChild(li);
   }
-  var people = [];
   function drawNav() {
-    var r = $("rooms"), p = $("people");
-    r.textContent = ""; p.textContent = "";
-    rooms.forEach(function (n) { navItem(r, "room:" + n, n); });
-    people.forEach(function (n) { navItem(p, "pm:" + n, n); });
-    $("nopeople").hidden = people.length > 0;
+    var r = $("rooms"), br = $("browse"), d = $("dms");
+    r.textContent = ""; br.textContent = ""; d.textContent = "";
+    rooms.forEach(function (n) { navItem(r, "room:" + n, n, {hash: true}); });
+    $("noRooms").hidden = rooms.length > 0;
+    var others = allRooms.filter(function (n) { return rooms.indexOf(n) < 0; });
+    $("browseH").hidden = others.length === 0;
+    others.forEach(function (n) { navItem(br, "browse:" + n, n, {hash: true, onclick: function () { joinRoom(n); closeRail(); }}); });
+    var names = people.concat(dmExtra.filter(function (n) { return people.indexOf(n) < 0; }));
+    names.forEach(function (n) { navItem(d, "pm:" + n, n, {online: people.indexOf(n) >= 0}); });
+    $("noDms").hidden = names.length > 0;
+    var on = $("online"); on.textContent = "";
+    if (!people.length) { var li = el("li", "note", "Nobody else is online."); on.appendChild(li); }
+    people.forEach(function (n) {
+      var li = el("li"), b = el("button"); b.type = "button"; b.appendChild(avatar(n, false, true)); b.appendChild(el("span", "", n));
+      b.onclick = function () { openConv("pm:" + n); }; li.appendChild(b); on.appendChild(li);
+    });
+    document.title = (Object.keys(unread).reduce(function (s, k) { return s + (unread[k] || 0); }, 0) ? "(" + Object.keys(unread).reduce(function (s, k) { return s + (unread[k] || 0); }, 0) + ") " : "") + "Chat network";
   }
+  function closeRail() { $("rail").classList.remove("open"); }
 
-  function open(key) {
+  function openConv(key) {
     cur = key; unread[key] = 0;
     var room = key.indexOf("room:") === 0, name = key.slice(key.indexOf(":") + 1);
-    $("tt").textContent = room ? name : name;
-    $("ts").textContent = room ? "  Room" : "  Private conversation";
+    $("tt").textContent = room ? "# " + name : name;
+    var pill = $("tpill"); pill.hidden = false; pill.className = "pill " + (room ? "room" : "pm"); pill.textContent = room ? "Room" : "Private";
+    $("ts").textContent = room ? "Everyone in this room sees your messages" : (people.indexOf(name) >= 0 ? "Online. Only you two can read this" : "Offline. Messages cannot be delivered right now");
     $("msg").disabled = false; $("sbtn").disabled = false; $("msg").focus();
-    drawNav(); drawThread();
+    drawNav(); drawThread(true);
   }
 
-  function refreshPeople() {
-    if (!sid) { return; }
-    api("list", {what: "users"}).then(function (r) {
-      if (!r.ok) { return; }
-      people = r.items.filter(function (n) { return n !== me; }).sort();
-      drawNav();
+  function joinRoom(name) {
+    name = name.trim(); if (!name) { return; }
+    api("join", {room: name}).then(function (r) {
+      if (!r.ok) { add(cur || "room:", {kind: "bad", text: say(r)}); return; }
+      if (rooms.indexOf(name) < 0) { rooms.push(name); }
+      if (allRooms.indexOf(name) < 0) { allRooms.push(name); }
+      $("jr").value = "";
+      add("room:" + name, {kind: "sys", text: "You joined #" + name + ". Here now: " + r.members.join(", ")});
+      openConv("room:" + name);
     });
   }
 
+  /* ---------- presence and network ---------- */
+  function refresh() {
+    if (!sid) { return; }
+    api("list", {what: "users"}).then(function (r) {
+      if (r.ok) { people = r.items.filter(function (n) { return n !== me; }).sort(); dmExtra = dmExtra.filter(function (n) { return people.indexOf(n) < 0; }); drawNav(); if (cur && cur.indexOf("pm:") === 0) { openConvKeep(); } }
+    });
+    api("list", {what: "rooms"}).then(function (r) { if (r.ok) { allRooms = r.items.slice().sort(); drawNav(); } });
+    api("net").then(drawNet);
+  }
+  function openConvKeep() {
+    var name = cur.slice(3);
+    $("ts").textContent = people.indexOf(name) >= 0 ? "Online. Only you two can read this" : "Offline. Messages cannot be delivered right now";
+  }
+  function chip(text, cls) { return el("span", "chip " + (cls || ""), text); }
+  function drawNet(n) {
+    var box = $("net"), alert = $("netAlert"); box.textContent = ""; alert.hidden = true;
+    if (!n || !n.ok || !n.available) {
+      box.appendChild(el("p", "note", "The controller is not reachable from here, so the network details are hidden. Chat still works."));
+      return;
+    }
+    var path = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    path.setAttribute("viewBox", "0 0 260 64");
+    var hot = n.blocked ? "var(--bad)" : (n.throttled || n.heavy) ? "var(--warn)" : "var(--accent)";
+    path.innerHTML = '<g fill="none" stroke="' + hot + '" stroke-width="3"><path d="M52 40H108"/><path d="M152 40H208"/></g>' +
+      '<g font-size="11" text-anchor="middle" fill="var(--ink)"><rect x="6" y="26" width="46" height="28" rx="8" fill="var(--accent-soft)"/><text x="29" y="44">You</text>' +
+      '<rect x="108" y="22" width="44" height="36" rx="9" fill="' + hot + '"/><text x="130" y="44" fill="#fff">Switch</text>' +
+      '<rect x="208" y="26" width="46" height="28" rx="8" fill="var(--accent-soft)"/><text x="231" y="44">Server</text></g>';
+    box.appendChild(path);
+    var r1 = el("div", "row"); r1.appendChild(el("span", "", "Your host")); r1.appendChild(el("span", "", n.ip || "unknown")); box.appendChild(r1);
+    var r2 = el("div", "row"); r2.appendChild(el("span", "", "Policy"));
+    var c = el("span");
+    if (n.mode === "baseline") { c.appendChild(chip("Baseline: no policy", "off")); }
+    else {
+      if (n.blocked) { c.appendChild(chip("Blocked", "bad")); }
+      else {
+        c.appendChild(chip(n.allowed ? "Allowed" : "Not registered", n.allowed ? "" : "bad"));
+        if (n.vip) { c.appendChild(chip("VIP queue", "vip")); }
+        if (n.throttled) { c.appendChild(chip("Throttled", "warn")); }
+        if (n.heavy) { c.appendChild(chip("Rate limited", "warn")); }
+      }
+    }
+    r2.appendChild(c); box.appendChild(r2);
+    var r3 = el("div", "row"); r3.appendChild(el("span", "", "Server link")); r3.appendChild(el("span", "", Math.round((n.util || 0) * 100) + "%" + (n.congested ? ", congested" : ""))); box.appendChild(r3);
+    var how = n.blocked ? "The network is dropping everything from this host for a while (too many failed sign-ins)."
+      : n.throttled ? "Too many messages too fast. The network moved this host to the slow bulk queue."
+      : n.vip ? "Room chat travels in the fast queue because this host is on the VIP list."
+      : "Room chat uses the normal queue. Private messages use the fast queue.";
+    box.appendChild(el("p", "note", how));
+    if (n.blocked || n.throttled) { alert.textContent = n.blocked ? "Your host is blocked by the network. Messages will not get through until the block expires." : "Your host is being throttled for sending too fast. Slow down and it will clear."; alert.className = "alert" + (n.blocked ? " bad" : ""); alert.hidden = false; }
+  }
+
+  /* ---------- live events ---------- */
   function connect() {
     es = new EventSource("/api/events?sid=" + sid);
-    es.onopen = function () { setConn(true); };
-    es.onerror = function () { setConn(false); };
+    es.onopen = function () { $("conn").hidden = true; };
+    es.onerror = function () { $("conn").hidden = false; };
     es.onmessage = function (ev) {
       var m = JSON.parse(ev.data);
       if (m.type === "MSG") {
-        if (m.kind === "room") { add("room:" + m.room, "", m.from, m.text); }
-        else { add("pm:" + m.from, "pm", m.from + " (private)", m.text); }
+        if (m.kind === "room") { add("room:" + m.room, {kind: "msg", who: m.from, text: m.text, ts: m.ts}); }
+        else { add("pm:" + m.from, {kind: "pm", who: m.from, text: m.text, ts: m.ts}); }
       } else if (m.type === "ERR") {
-        add(cur || "room:", "bad", "", say(m));
-      } else if (m.type === "CLOSED") {
-        setConn(false);
-      }
+        add(cur || "room:", {kind: "bad", text: say(m)});
+      } else if (m.type === "CLOSED") { $("conn").hidden = false; }
     };
   }
-  function setConn(ok) {
-    var c = $("conn");
-    c.className = ok ? "" : "down";
-    c.textContent = ok ? "Browser to this gateway over HTTP, gateway to the chat server over TCP ports 5000, 5001, 5002. The SDN rules apply to the gateway's address."
-                       : "Connection lost. Retrying. If this stays, sign out and in again.";
-  }
 
+  /* ---------- wiring ---------- */
   $("lform").addEventListener("submit", function (e) {
     e.preventDefault();
     var mode = (e.submitter && e.submitter.getAttribute("data-mode")) || "login";
     $("lerr").textContent = "";
     fetch("/api/login", {method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({mode: mode, user: $("u").value, password: $("p").value})})
+      body: JSON.stringify({mode: mode, user: $("u").value.trim(), password: $("p").value})})
       .then(function (r) { return r.json(); }).then(function (r) {
         if (!r.ok) { $("lerr").textContent = say(r); return; }
         sid = r.sid; me = r.user;
         $("login").hidden = true; $("app").hidden = false; $("meName").textContent = me;
-        connect(); setConn(true); drawNav(); drawThread(); refreshPeople();
-        setInterval(refreshPeople, 5000);
+        $("meAv").style.background = color(me); $("meAv").textContent = me[0].toUpperCase();
+        connect(); drawNav(); drawThread(true); refresh(); timers.push(setInterval(refresh, 4000));
       }).catch(function () { $("lerr").textContent = WORDS.SERVER_UNREACHABLE; });
   });
+  $("jform").addEventListener("submit", function (e) { e.preventDefault(); joinRoom($("jr").value); });
 
-  $("jform").addEventListener("submit", function (e) {
-    e.preventDefault();
-    var name = $("jr").value.trim();
-    if (!name) { return; }
-    api("join", {room: name}).then(function (r) {
-      if (!r.ok) { add(cur || "room:", "bad", "", say(r)); return; }
-      if (rooms.indexOf(name) < 0) { rooms.push(name); }
-      $("jr").value = "";
-      add("room:" + name, "sys", "", "You joined. Here now: " + r.members.join(", "));
-      open("room:" + name);
-    });
-  });
-
-  $("send").addEventListener("submit", function (e) {
-    e.preventDefault();
-    var text = $("msg").value;
-    if (!text.trim() || !cur) { return; }
-    var room = cur.indexOf("room:") === 0, name = cur.slice(cur.indexOf(":") + 1);
+  function send() {
+    var box = $("msg"), text = box.value;
+    if (!text.trim() || !cur || cur.indexOf("browse:") === 0) { return; }
+    var room = cur.indexOf("room:") === 0, name = cur.slice(cur.indexOf(":") + 1), key = cur;
     api(room ? "msg" : "pm", room ? {room: name, text: text} : {to: name, text: text}).then(function (r) {
-      if (!r.ok) { add(cur, "bad", "", say(r)); return; }
-      add(cur, "me" + (room ? "" : " pm"), "You", text);
-      $("msg").value = "";
+      if (!r.ok) { add(key, {kind: "bad", text: say(r)}); return; }
+      add(key, {kind: room ? "msg" : "pm", who: me, mine: true, text: text});
+      drawThread(true);
     });
+    box.value = ""; fit();
+  }
+  function fit() { var b = $("msg"); b.style.height = "auto"; b.style.height = Math.min(b.scrollHeight, 150) + "px"; }
+  $("send").addEventListener("submit", function (e) { e.preventDefault(); send(); });
+  $("msg").addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } });
+  $("msg").addEventListener("input", fit);
+  EMOJI.forEach(function (x) {
+    var b = el("button", "emo", x); b.type = "button"; b.setAttribute("aria-label", "Insert " + x);
+    b.onclick = function () { var t = $("msg"); if (!t.disabled) { t.value += x; t.focus(); fit(); } };
+    $("emos").insertBefore(b, $("emos").querySelector(".hint"));
   });
-
-  $("out").onclick = function () {
-    if (es) { es.close(); }
-    api("logout").then(function () { location.reload(); });
-  };
+  $("thread").addEventListener("scroll", function () { var t = $("thread"); if (t.scrollHeight - t.scrollTop - t.clientHeight < 80) { $("jump").hidden = true; } });
+  $("jump").onclick = function () { var t = $("thread"); t.scrollTop = t.scrollHeight; $("jump").hidden = true; };
+  $("menu").onclick = function () { $("rail").classList.toggle("open"); };
+  $("out").onclick = function () { if (es) { es.close(); } timers.forEach(clearInterval); api("logout").then(function () { location.reload(); }); };
   window.addEventListener("beforeunload", function () {
     if (sid) { navigator.sendBeacon("/api/logout", new Blob([JSON.stringify({sid: sid})], {type: "application/json"})); }
   });

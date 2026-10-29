@@ -13,12 +13,22 @@ or run `iperf3` and watch the page react.
 Code: `controller/ui_api.py` (routes `/ui`, `/events`, `/snapshot`; registered in a try/except so it can never take the
 event API down), `controller/ui/dashboard.html`, `App.snapshot()` in `controller/app.py`.
 
+The page also draws a **live network map**: the chat server, the switches (a triangle in D2, one switch in D1) and hosts
+h2 to h4, each coloured by the policy the controller applies to it (allowed, VIP, throttled, rate limited, blocked, not
+registered). The server link thickens and animates with load, and a failed switch link turns red and dashed.
+
 ## 2. Web chat client
 
 ```bash
 make web-chat                      # python3 chat/web_gateway.py --server 10.0.0.1 --port 8000
 # or inside Mininet:  h2 python3 chat/web_gateway.py --server 10.0.0.1 --port 8000 &
 ```
+
+The page looks like a normal chat app: rooms and direct messages in a sidebar, avatars, grouped messages with times and
+day dividers, unread badges, a list of who is online, other rooms you can join, emoji, Enter to send, and a phone layout.
+The right-hand **Your network path** card is the SDN part: it asks the controller (`--controller`, default
+`CONTROLLER_URL`) what it does to this host (allowed, VIP, throttled, blocked), shows the server-link load, and warns in
+the chat when the host is throttled or blocked. If the controller is unreachable the card says so and chat still works.
 
 Open `http://localhost:8000` (or the host's address). Each signed-in browser gets its own real TCP connections to ports
 5000, 5001 and 5002 of the chat server, with the same protocol as `chat/client.py`. The server therefore sees the

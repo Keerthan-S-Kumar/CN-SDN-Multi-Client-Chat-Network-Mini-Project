@@ -88,3 +88,35 @@ def test_logout_ends_session(base):
     s = post(base, "login", mode="register", user="gone_w", password="pw")["sid"]
     assert post(base, "logout", sid=s)["ok"]
     assert post(base, "list", sid=s, what="users")["code"] == "NOT_LOGGED_IN"
+
+
+def test_network_card_without_and_with_controller(base):
+    s = post(base, "login", mode="register", user="net_w", password="pw")["sid"]
+    old = web_gateway.CONTROLLER
+    try:
+        web_gateway.CONTROLLER = "http://127.0.0.1:9"          # nothing listens: card must degrade, not fail
+        n = post(base, "net", sid=s)
+        assert n["ok"] and n["available"] is False
+
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+        class H(BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_GET(self):
+                body = json.dumps({"/snapshot": {"rules": {"allow": ["127.0.0.1"], "vip": ["127.0.0.1"]}},
+                                   "/metrics": {"mode": "sdn", "util": 0.4, "congested": False}}[self.path]).encode()
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+        fake = ThreadingHTTPServer(("127.0.0.1", 0), H)
+        threading.Thread(target=fake.serve_forever, daemon=True).start()
+        web_gateway.CONTROLLER = "http://127.0.0.1:%d" % fake.server_address[1]
+        n = post(base, "net", sid=s)
+        fake.shutdown()
+        assert n["available"] and n["allowed"] and n["vip"] and not n["blocked"] and n["util"] == 0.4
+    finally:
+        web_gateway.CONTROLLER = old
