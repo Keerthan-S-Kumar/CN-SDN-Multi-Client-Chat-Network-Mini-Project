@@ -1,6 +1,6 @@
 export PYTHONPATH := .
 MODE ?= sdn
-RYU ?= $(shell command -v ryu-manager 2>/dev/null || echo $(HOME)/ryuenv/bin/ryu-manager)
+RYU ?= $(shell command -v ryu-manager 2>/dev/null || echo $(HOME)/ryu-env/bin/ryu-manager)
 PY ?= $(dir $(RYU))python3
 TOPO ?= single
 
@@ -39,6 +39,11 @@ report:
 
 test:
 	$(PY) -m unittest controller.test_logic -v
-	@if ls tests/test_*.py >/dev/null 2>&1; then python3 -m unittest discover -s tests -v; fi
 
-.PHONY: web-chat controller topo server mock flows meters queues metrics experiments report test
+test-net:
+	sudo env PYTHONPATH=. python3 -m unittest discover -s tests -v
+
+test-chat:
+	python3 -m pytest tests/test_chat_server.py tests/test_web_gateway.py -q
+
+.PHONY: web-chat test-net test-chat controller topo server mock flows meters queues metrics experiments report test
