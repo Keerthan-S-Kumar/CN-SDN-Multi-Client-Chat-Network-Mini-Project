@@ -41,7 +41,7 @@ docs/        contract, architecture, evaluation plan
 
 ## Setup
 
-Tested on an Ubuntu VM (VirtualBox) with Python 3.14.
+Tested on an Ubuntu VM (VirtualBox) with Python 3.9
 
 ### 1. Mininet and Open vSwitch
 
