@@ -24,13 +24,14 @@ from ryu.ofproto import ofproto_v1_3
 
 from common.constants import (
     BLOCK_SECONDS, BOTTLENECK_BPS, BOTTLENECK_DPID, BOTTLENECK_PORT, CLIENT_IPS, CONTROLLER_LOG, EVENTS,
-    HOST_MAC, MODE, MONITOR_INTERVAL, PRIO_DROP, RESULTS_DIR, TABLE_POLICY, TRIANGLE_LINKS)
+    HOST_MAC, MODE, MONITOR_INTERVAL, PRIO_DROP, TABLE_POLICY, TRIANGLE_LINKS)
 from controller import flows
 from controller.monitor import Congestion, bps, heavy_hosts
 from controller.policy import Policy
 from controller.rest_api import APP_KEY, Api
 from controller.routing import Topo
 
+CONTROLLER_LOG = os.environ.get("CHATSDN_LOG", CONTROLLER_LOG)     # the experiment runner sets one file per run
 POLICY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "policy.json")
 MAC_TO_IP = {HOST_MAC[h]: ip for h, ip in CLIENT_IPS.items()}
 ETH_LLDP = 0x88CC
@@ -68,7 +69,7 @@ class ChatSdn(app_manager.RyuApp):
         self.barriers = {}                         # (dpid, xid) -> pending dict
         self.last_flow_install_ms = 0.0
         self.last_reroute_ms = 0.0
-        os.makedirs(RESULTS_DIR, exist_ok=True)
+        os.makedirs(os.path.dirname(os.path.abspath(CONTROLLER_LOG)), exist_ok=True)
         kwargs["wsgi"].register(Api, {APP_KEY: self})
         try:                                       # dashboard is optional: it must never break the event API
             from controller.ui_api import UiApi

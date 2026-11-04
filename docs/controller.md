@@ -65,7 +65,8 @@ link is routed around. A `baseline` mode switches all of that off so the evaluat
 | Congestion | s1 port 1 transmit rate >= 80 % of 10 Mbps for 2 samples | meter the host sending >= 30 % of the link | rate <= 50 % for 2 samples |
 | Link failure | port-status down on an inter-switch port | recompute shortest paths, reinstall routes | port-status up |
 
-Measured by the controller itself and written to `eval/results/controller_events.jsonl`:
+Measured by the controller itself and written to `eval/results/controller_events.jsonl` (set `CHATSDN_LOG=<path>` to write a
+separate file per run, which is what the experiment runner should do):
 `flow_install` (event received to barrier reply on all switches) and `reroute_done` (port down to barrier reply).
 
 ## Baseline mode
@@ -74,12 +75,38 @@ Measured by the controller itself and written to `eval/results/controller_events
 It never gates, queues, meters, monitors, or reacts to link failures. Same topology, same queues, same traffic; only the
 controller differs, which is what makes the comparison fair.
 
-## How to test
+## Test cases (controller)
 
-```bash
-make test                      # 20 unit tests (needs Ryu importable)
-bash controller/verify_live.sh # against a running controller + Mininet; prints PASS/FAIL per rule family
-```
+Setup for T1-T10: `make controller` (terminal 1), `make topo TOPO=single` (terminal 2, `TOPO=triangle` for T8-T9),
+chat server running on h1 (`h1 python3 chat/server.py --host 0.0.0.0 &`). Rules are read with `make flows`,
+state with `curl -s localhost:8080/state`, counters and timings with `curl -s localhost:8080/metrics`.
+Fill the last column when you run each case; keep the output as screenshots for the demo.
+
+| ID | Case | Steps | Expected | Run |
+|---|---|---|---|---|
+| T1 | Switch connects, static rules installed | start controller, then topology | log `switch 1 connected`; `make flows` shows 3 drop rules (5001-5003, prio 100) and the 5000 rule (prio 150) | [ ] |
+| T2 | Unregistered host is blocked (unauthorised access) | `h2 nc -zv -w2 10.0.0.1 5001`, then `... 5000` | 5001 times out, 5000 connects; `drop_hits` in `/metrics` goes up | [ ] |
+| T3 | Registering opens the gate | register on h2 with `chat/client.py`, then retry 5001 | 5001 now connects; `make flows` shows 3 prio-200 rules for 10.0.0.2 (cookies `0x5001`-`0x5003`); `/state` lists the user | [ ] |
+| T4 | Disconnect closes the gate | quit the client | prio-200 rules for 10.0.0.2 gone; 5001 blocked again; drop rules still there | [ ] |
+| T5 | VIP policy | register a user listed in `policy.json` (`alice`), or join room `vip` | one prio-250 rule for that IP (queue 1); leaving the room removes it | [ ] |
+| T6 | Spam throttle | `chat/bot.py --spammer` alone on h4 | `flag` event, 3 prio-300 rules with meter 1 (`make meters`); removed ~30 s after the spam stops | [ ] |
+| T7 | Brute-force block | 5 wrong logins from one host | `block` event, 4 prio-400 drop rules for that IP, `/metrics.blocked` lists it; gone after 60 s | [ ] |
+| T8 | Congestion response (triangle) | `iperf3 -u -b 12M` from h3 to h1 while bots chat | `/metrics.congested` true, prio-60 rule for 10.0.0.3, `congestion_on`/`heavy_on` in the event log; all clear after iperf stops | [ ] |
+| T9 | Link failure and recovery (triangle) | Mininet CLI: `link s1 s2 down`, ping h2 to h1, `link s1 s2 up` | `links_down` = `[[1,2]]`, ping recovers over s3, `reroute_done` with `ms` in the log; after `up` the direct path returns | [ ] |
+| T10 | Baseline behaves differently | restart with `make controller MODE=baseline`, repeat T2 and T9 | 5001 reachable without registering; no queue/meter rules; the failed link is not rerouted | [ ] |
+| T11 | Unit tests | `make test` | 20 controller tests pass | [ ] |
+| T12 | Live rule check | `bash controller/verify_live.sh` | every line `PASS` | [ ] |
+
+## Rubric map (controller)
+
+| Rubric line | Where it is shown |
+|---|---|
+| Mininet + SDN implementation (D1, 4) | `app.py`, `flows.py`, `routing.py`; T1, T2, T11 |
+| Socket-SDN integration (D1, 3) | event to rule path in `handle_event`; T3, T4, T12 |
+| Initial testing and demo (D1, 2) | T1-T4 with screenshots |
+| Dynamic SDN functionality (D2, 6) | T5-T9 (prioritisation, filtering, monitoring, blocking, rerouting, recovery) |
+| Challenging scenario (D2, 4) | T2 (unauthorised access), T7, T8 (congestion), T9 (link failure) |
+| Performance and baseline (D2, 5) | T10 and `docs/eval-plan.md`; controller timings in `controller_events.jsonl` |
 
 ## Known limits (say these before the examiner does)
 
