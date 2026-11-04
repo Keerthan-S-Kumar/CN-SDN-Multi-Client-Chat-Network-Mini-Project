@@ -23,11 +23,11 @@ T3, the route before the failure:
 
     sudo ovs-ofctl -O OpenFlow13 dump-flows s2 table=1 | grep 00:00:00:00:00:03
 
-Expect `output:"s2-eth3"` (the direct link to s3). Now at `mininet>`:
+Expect `actions=output:3` (port 3, the direct link to s3). Now at `mininet>`:
 
     link s2 s3 down
 
-T3, the same command again. Expect `output:"s2-eth2"` (the detour via s1). T1 shows the controller's link-down handling.
+T3, the same command again. Expect `actions=output:2` (port 2, the detour via s1). T1 shows the controller's link-down handling.
 At `mininet>`, bring it back after about 5 seconds:
 
     link s2 s3 up
@@ -36,7 +36,7 @@ Wait for the ping to finish (about 20 seconds), then:
 
     sh tail -3 /tmp/ping.txt
 
-Say: "The controller saw the port go down, deleted the routes, and relearned them over s1. Only a few pings were lost, and traffic carried on."
+Say: "The controller saw the port go down, deleted the routes, and relearned them over s1. In the rehearsal no pings were lost; traffic carried on."
 (To compare with no SDN, the baseline link-failure numbers are in the results: p95 11 seconds.)
 
 ## C. Congestion with queues and meters (2.5 min)
@@ -47,7 +47,7 @@ At `mininet>`:
     h3 iperf -c 10.0.0.1 -u -b 12M -t 25 -p 5201 > /dev/null 2>&1 &
     h2 python3 chat/bot.py --users 3 --prefix demo --duration 10 --out /tmp/demo.csv
 
-The last command prints a line `latency ms: p50=... p95=...`. Expect single-digit milliseconds even though a 12 Mbps stream is filling the 10 Mbps link.
+The last command prints a line `latency ms: p50=... p95=...`. Expect single-digit milliseconds even though a 12 Mbps stream is filling the 10 Mbps link. In queue-stats, queue 0 carries the iperf stream and queues 1 and 2 carry chat (control and room).
 T3 (while iperf is running):
 
     sudo ovs-ofctl -O OpenFlow13 dump-meters s1
@@ -58,8 +58,8 @@ Say: "Chat traffic sits in its own priority queue and the heavy stream is limite
 ## D. Block rules (1 min)
 T3:
 
-    python3 tools/post_event.py block "" 10.0.0.4 --reason bad_login
-    sudo ovs-ofctl -O OpenFlow13 dump-flows s1 table=0 | grep 10.0.0.4
+    PYTHONPATH=. python3 tools/post_event.py block "" 10.0.0.4 --reason bad_login
+    sudo ovs-ofctl -O OpenFlow13 dump-flows s1 table=0 | grep priority=400
 
 Expect 4 rules at priority 400 (ports 5000 to 5003). Say: "This is what the server sends after repeated bad logins; the block lifts by itself after 60 seconds."
 
