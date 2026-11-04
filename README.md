@@ -243,6 +243,15 @@ docs/        architecture, interface contract, controller notes, evaluation plan
 | Dashboard shows events from an earlier run | Delete `eval/results/*.jsonl` before starting the controller, then refresh the page. |
 | Ping fails on the `triangle` with a plain learning switch | The triangle has a loop; use the project controller, which routes loop-free. |
 
+## D2: experiments and results
+
+Run the experiments (as root, with the Ryu environment installed, nothing else running):
+
+    sudo env PYTHONPATH=. python3 eval/run_experiments.py --core --runs 3
+    sudo env PYTHONPATH=. python3 eval/run_experiments.py --only scale5,scale10,scale25,scale50,scale100 --runs 1
+    make report
+
+`make report` writes `eval/results/summary.csv` and four graphs. Results and discussion: `docs/results.md`. Tests: `docs/testing.md`. Live demo script: `docs/demo-d2.md`.
 ## Status and known limits
 
 - **Deliverable 1** (single switch, gating, classification, socket to SDN integration, dashboard) is built and
