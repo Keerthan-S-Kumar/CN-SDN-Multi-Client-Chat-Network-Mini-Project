@@ -33,7 +33,7 @@ The two runs overlap (the chat tests run in both), so the numbers are not added 
 | Congestion | a 12 Mbps UDP stream into the 10 Mbps bottleneck | median latency 3.5 ms (sdn) against 165 ms (baseline) |
 | Link failure | link s1-s2 down at 10 s, up at 20 s | p95 35 ms (sdn) against 11,355 ms (baseline); no loss |
 | Flood | one spammer at 200 messages per second | no improvement in latency (see results doc) |
-| Scale | 5 to 100 bots | same latency up to 50 bots; 100 bots worse with sdn in one run |
+| Scale | 5 to 100 bots | same up to 50 bots; both modes overloaded at 100 bots, with very variable runs |
 | Idle | overhead of the controller | equal to baseline within noise |
 
 ## 4. Manual scenarios (demo)
@@ -55,6 +55,6 @@ The first three steps are in `docs/demo-d1.md`; the block rules are also checked
 
 ## Known gaps
 
-- Scale runs have one run per mode, so there is no spread estimate.
+- At 100 bots both modes are overloaded and the runs vary widely, so no conclusion is drawn there; scale 5, 10 and 25 have one run per mode.
 - The flood scenario shows no latency gain from throttling; see `docs/results.md`.
 - Rules are per host IP, so one flagged user throttles every user on the same host.

@@ -11,7 +11,7 @@ Open `eval/results/latency_bar.png`, `scalability.png`, `linkfail_timeline.png` 
 
 ## A. Results first (1.5 min)
 Show `latency_bar.png` and the table in `docs/results.md`.
-Say: "Same triangle topology and same queues, only the controller mode changes. With congestion the median chat latency drops from 165 ms to 3.5 ms. With a link failure the p95 drops from 11 seconds to 35 ms. When idle there is no difference, so the controller costs nothing. Flood showed no gain and scale 100 was worse in one run; both are in the results doc."
+Say: "Same triangle topology and same queues, only the controller mode changes. With congestion the median chat latency drops from 165 ms to 3.5 ms. With a link failure the p95 drops from 11 seconds to 35 ms. When idle there is no difference, so the controller costs nothing. Flood showed no gain, and at 100 bots both modes are overloaded; both are in the results doc."
 
 ## B. Live link failure and reroute (3 min)
 At `mininet>` (type without the prompt text):
