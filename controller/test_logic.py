@@ -328,6 +328,50 @@ class TestApp(unittest.TestCase):
         self.assertIn("congestion_off", kinds)
         self.assertIn("heavy_off", kinds)
 
+    def test_explain_gives_reasons(self):
+        self.ev("register", "bob", "10.0.0.3")
+        self.ev("flag", "bob", "10.0.0.3")
+        self.ev("block", "", "10.0.0.4")
+        ex = self.app.explain()
+        by = {(a["category"], a["ip"]): a for a in ex["actions"]}
+        self.assertIn("spam", by[("throttle", "10.0.0.3")]["reason"])
+        self.assertEqual(by[("throttle", "10.0.0.3")]["user"], "bob")
+        self.assertIn("brute force", by[("block", "10.0.0.4")]["reason"])
+        self.assertGreater(by[("block", "10.0.0.4")]["expires_in_s"], 0)
+        self.assertEqual({r["cat"] for r in ex["rules"]}, {"gate", "allow", "vip", "throttle", "block", "heavy"})
+        self.ev("unflag", "bob", "10.0.0.3")
+        self.assertNotIn(("throttle", "10.0.0.3"), {(a["category"], a["ip"]) for a in self.app.explain()["actions"]})
+
+    def test_traffic_counts_bytes_per_class_at_the_edge_switch(self):
+        def stat(ip, port, n, prio=C.PRIO_ALLOW):
+            return SimpleNamespace(table_id=C.TABLE_POLICY, priority=prio, byte_count=n,
+                                   match=SimpleNamespace(items=lambda: [("ipv4_src", ip), ("tcp_dst", port)]))
+        self.app.hosts[MAC["h2"]] = (2, 1)
+        self.app._count_traffic(2, [stat("10.0.0.2", C.PORT_ROOM, 1000), stat("10.0.0.2", C.PORT_BULK, 5000)])
+        self.app._count_traffic(1, [stat("10.0.0.2", C.PORT_ROOM, 999999)])           # transit switch: ignored
+        self.app._count_traffic(2, [stat("10.0.0.2", C.PORT_ROOM, 1500), stat("10.0.0.2", C.PORT_BULK, 9000)])
+        t = self.app.traffic()
+        self.assertEqual(t["hosts"]["10.0.0.2"]["bytes"]["room"], 1500)
+        self.assertEqual(t["hosts"]["10.0.0.2"]["bytes"]["bulk"], 9000)
+        self.assertEqual(t["classes"]["bulk"], 9000)
+        self.app._count_traffic(2, [stat("10.0.0.2", C.PORT_ROOM, 100)])             # counter reset after re-install
+        self.assertEqual(self.app.traffic()["hosts"]["10.0.0.2"]["bytes"]["room"], 1600)
+
+    def test_admin_actions(self):
+        self.ev("register", "bob", "10.0.0.3")
+        self.ev("flag", "bob", "10.0.0.3")
+        self.assertEqual(self.app.admin({"action": "unflag", "ip": "10.0.0.3"})[0], 200)
+        self.assertEqual(self.app.metrics()["throttled"], [])
+        self.app.admin({"action": "block", "ip": "10.0.0.3"})
+        self.assertEqual(self.app.state()["blocked"], ["10.0.0.3"])
+        self.app.admin({"action": "unblock", "ip": "10.0.0.3"})
+        self.assertEqual(self.app.state()["blocked"], [])
+        self.app.admin({"action": "vip", "user": "bob"})
+        self.assertIn("10.0.0.3", self.app.installed["vip"])
+        self.app.admin({"action": "ban", "user": "bob"})
+        self.assertEqual(self.app.state()["blocked"], ["10.0.0.3"])
+        self.assertEqual(self.app.admin({"action": "nope"})[0], 400)
+
     def test_barrier_logs_install_time(self):
         self.ev("register", "alice", "10.0.0.2")
         reqs = [(d.id, m) for d in self.dps.values() for m in d.sent
