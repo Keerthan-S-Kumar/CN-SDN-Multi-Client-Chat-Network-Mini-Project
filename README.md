@@ -1,5 +1,7 @@
 # Multi-Client Chat Network over SDN
 
+[![tests](https://github.com/Keerthan-S-Kumar/CN-SDN-Multi-Client-Chat-Network-Mini-Project/actions/workflows/tests.yml/badge.svg)](https://github.com/Keerthan-S-Kumar/CN-SDN-Multi-Client-Chat-Network-Mini-Project/actions/workflows/tests.yml)
+
 A multi-client chat application built on plain TCP sockets, running on a Mininet network that a Ryu SDN
 controller programs over OpenFlow 1.3. The chat server reports what users do (register, join, leave, spam,
 failed logins) to the controller, and the controller turns that into rules on the switch. So the network
@@ -30,7 +32,7 @@ Course: Computer Networks (UE25CS243A), SDN and socket programming mini project.
    private messaging and many simultaneous connections.
 2. Run it on a Mininet network controlled by an SDN controller, and classify chat traffic with flow rules.
 3. Apply user and room policies from application events (registration, rooms, spam, brute force).
-4. Measure scalability and response time against a static baseline controller (deliverable 2).
+4. Measure scalability and response time against a static baseline controller, including congestion, flood and link failure (deliverable 2).
 
 ## What it does
 
@@ -202,7 +204,7 @@ disappear on every switch.
 |---|---|
 | **Janhvi** | Chat application: threaded TCP server (registration, login, rooms, private messages, bulk port), command-line client, load-generating bots, spam and brute-force detection, result analysis and plotting scripts, and the 43-test chat server suite. Part A documentation (`docs/part-a.md`). |
 | **Keerthan** | SDN controller: the Ryu application (flow rules, two-table pipeline, routing, policy, congestion monitor, REST API), its 22 unit tests and live verification script, the live dashboard and the browser chat client, the frozen interface contract, and repository administration (branching, reviews, CODEOWNERS). |
-| **Harsha** | Network: Mininet topologies (single switch and triangle), the root-namespace link to the controller, Open vSwitch QoS queues, topology and triangle tests, and the architecture document. |
+| **Harsha** | Network and evaluation: Mininet topologies (single switch and triangle), the root-namespace link to the controller, Open vSwitch QoS queues, topology and triangle tests, the architecture document, and the D2 experiment runner (`eval/run_experiments.py`), result graphs, `docs/results.md`, `docs/testing.md` and `docs/demo-d2.md`. |
 
 Ownership rules and the per-deliverable split are in [`docs/ownership.md`](docs/ownership.md).
 
@@ -229,6 +231,9 @@ docs/        architecture, interface contract, controller notes, evaluation plan
 | [`docs/part-a.md`](docs/part-a.md) | Chat server, client, bots, spam detection, analysis scripts |
 | [`docs/ui.md`](docs/ui.md) | Live SDN dashboard and browser chat client |
 | [`docs/eval-plan.md`](docs/eval-plan.md) | Scenarios, metrics and result formats for deliverable 2 |
+| [`docs/results.md`](docs/results.md) | D2 results: SDN vs static baseline, tables, graphs, discussion |
+| [`docs/testing.md`](docs/testing.md) | Test cases and how to run them |
+| [`docs/demo-d2.md`](docs/demo-d2.md) | Step-by-step script for the live D2 demonstration |
 | [`docs/ownership.md`](docs/ownership.md) | Who owns which files and the task split |
 
 ## Troubleshooting
@@ -245,21 +250,39 @@ docs/        architecture, interface contract, controller notes, evaluation plan
 
 ## D2: experiments and results
 
-Run the experiments (as root, with the Ryu environment installed, nothing else running):
+Everything below is reproducible from this repository. Run as root with the Ryu environment installed and nothing else running:
 
-    sudo env PYTHONPATH=. python3 eval/run_experiments.py --core --runs 3
-    sudo env PYTHONPATH=. python3 eval/run_experiments.py --only scale5,scale10,scale25,scale50,scale100 --runs 1
-    make report
+```bash
+make reproduce        # unit tests, chat tests, core experiments (3 runs per mode), then the report
+# or step by step:
+sudo env PYTHONPATH=. python3 eval/run_experiments.py --core --runs 3
+sudo env PYTHONPATH=. python3 eval/run_experiments.py --only scale5,scale10,scale25,scale50,scale100 --runs 1
+make report
+```
 
-`make report` writes `eval/results/summary.csv` and four graphs. Results and discussion: `docs/results.md`. Tests: `docs/testing.md`. Live demo script: `docs/demo-d2.md`.
+`make report` writes `eval/results/summary.csv` and four graphs. Full tables and discussion are in
+[`docs/results.md`](docs/results.md); test cases are in [`docs/testing.md`](docs/testing.md); the live demo
+script is [`docs/demo-d2.md`](docs/demo-d2.md).
+
+| Latency by scenario | Scalability |
+|---|---|
+| ![Latency by scenario](eval/results/latency_bar.png) | ![Scalability](eval/results/scalability.png) |
+| ![Link failure timeline](eval/results/linkfail_timeline.png) | ![Congestion CDF](eval/results/congestion_cdf.png) |
+
+Headline results (3 runs per mode; details and caveats in `docs/results.md`): under a congested bottleneck the
+SDN controller keeps median message latency at about 3.5 ms where the static baseline reaches about 165 ms.
+After a link failure SDN keeps p95 latency at about 35 ms while the baseline's tail reaches about 11 s. The
+results also show limits: SDN gave no latency gain under a one-host flood, and at 100 bots both modes are
+overloaded (the cause is probably the VM and the single-process chat server, which we did not test separately).
+
 ## Status and known limits
 
-- **Deliverable 1** (single switch, gating, classification, socket to SDN integration, dashboard) is built and
-  documented. Its demonstration runs live on a Mininet VM.
-- **Deliverable 2** features (queues, meters, spam throttling, congestion response, link-failure reroute,
-  baseline comparison, scalability measurements) are implemented in the controller and topology code and are
-  covered by unit tests; the experiment runner (`eval/run_experiments.py`) and the final measurements are
-  still in progress.
+- **Deliverable 1** (single switch, gating, classification, socket to SDN integration, dashboard) is complete
+  and demonstrated.
+- **Deliverable 2** is implemented and measured: queues, meters, spam throttling, brute-force block,
+  congestion response, link-failure rerouting on a triangle, baseline comparison, an experiment runner,
+  scalability runs up to 100 bots, and the dashboard and browser chat.
 - Policy is per host IP, not per user or room: one TCP connection carries all of a user's rooms, and users
   on the same host share its rules.
 - The controller is a single process with no failover, and routing is shortest-path, not load-aware.
+- At 100 bots the bottleneck saturates in both modes; see `docs/results.md` for the honest numbers.

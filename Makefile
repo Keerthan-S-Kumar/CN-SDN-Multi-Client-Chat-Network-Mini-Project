@@ -46,4 +46,9 @@ test-net:
 test-chat:
 	python3 -m pytest tests/test_chat_server.py tests/test_web_gateway.py -q
 
-.PHONY: web-chat test-net test-chat controller topo server mock flows meters queues metrics experiments report test
+reproduce: test test-chat
+	sudo env PYTHONPATH=. python3 eval/run_experiments.py --core --runs 3
+	sudo env PYTHONPATH=. python3 eval/run_experiments.py --only scale5,scale10,scale25,scale50,scale100 --runs 1
+	$(MAKE) report
+
+.PHONY: reproduce web-chat test-net test-chat controller topo server mock flows meters queues metrics experiments report test
