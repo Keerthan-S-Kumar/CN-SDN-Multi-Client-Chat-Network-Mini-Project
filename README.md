@@ -239,6 +239,7 @@ docs/        architecture, interface contract, controller notes, evaluation plan
 | [`docs/results.md`](docs/results.md) | D2 results: SDN vs static baseline, tables, graphs, discussion |
 | [`docs/testing.md`](docs/testing.md) | Test cases and how to run them |
 | [`docs/demo-d2.md`](docs/demo-d2.md) | Step-by-step script for the live D2 demonstration |
+| [`docs/viva.md`](docs/viva.md) | Questions and honest answers for the viva |
 | [`docs/ownership.md`](docs/ownership.md) | Who owns which files and the task split |
 
 ## Troubleshooting
