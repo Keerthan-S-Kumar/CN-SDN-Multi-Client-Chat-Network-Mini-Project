@@ -207,8 +207,8 @@ disappear on every switch.
 
 | Member | Contributions |
 |---|---|
-| **Janhvi** | Chat application: threaded TCP server (registration, login, rooms, private messages, bulk port), command-line client, load-generating bots, spam and brute-force detection, result analysis and plotting scripts, and the 43-test chat server suite. Part A documentation (`docs/part-a.md`). |
-| **Keerthan** | SDN controller: the Ryu application (flow rules, two-table pipeline, routing, policy, congestion monitor, REST API), its 23 unit tests and live verification script, the live dashboard and the browser chat client, the frozen interface contract, and repository administration (branching, reviews, CODEOWNERS). |
+| **Janhvi** | Chat application: threaded TCP server (registration, login, rooms, private messages, bulk port), command-line client, load-generating bots, spam and brute-force detection, result analysis and plotting scripts, and the chat server test suite. Part A documentation (`docs/part-a.md`). |
+| **Keerthan** | SDN controller: the Ryu application (flow rules, two-table pipeline, routing, policy, congestion monitor, REST API), its 23 unit tests and live verification script, the five-tab live dashboard, the browser chat client, file sharing (protocol v2.1, gateway and browser upload), salted password hashing and optional account persistence, the frozen interface contract, and repository administration (branching, reviews, CODEOWNERS). |
 | **Harsha** | Network and evaluation: Mininet topologies (single switch and triangle), the root-namespace link to the controller, Open vSwitch QoS queues, topology and triangle tests, the architecture document, and the D2 experiment runner (`eval/run_experiments.py`), result graphs, `docs/results.md`, `docs/testing.md` and `docs/demo-d2.md`. |
 
 Ownership rules and the per-deliverable split are in [`docs/ownership.md`](docs/ownership.md).
