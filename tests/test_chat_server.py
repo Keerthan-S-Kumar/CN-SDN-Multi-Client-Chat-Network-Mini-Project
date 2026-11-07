@@ -632,3 +632,136 @@ def test_repeated_bad_logins_trigger_block_event(controller, make_user):
     ev = controller.wait_event(timeout=5, event="block")
     assert ev is not None, "no block event after repeated bad logins"
     assert ev.get("reason") == "bad_login"
+
+# --------------------------------------------------------------------------
+# file sharing (port 5003)
+# --------------------------------------------------------------------------
+import base64  # noqa: E402
+
+
+def bulk_socket(user):
+    s = connect(BULK, timeout=5)
+    assert call(s, "ATTACH", token=user.token)["type"] == "OK"
+    return s
+
+
+def upload(s, data, **target):
+    r = call(s, "FILE_UP", name="../../etc/hello world.txt", size=len(data), **target)
+    if r["type"] != "OK":
+        return r
+    chunk = r["chunk"]
+    parts = [data[i:i + chunk] for i in range(0, len(data), chunk)] or [b""]
+    for i, part in enumerate(parts):
+        send_msg(s, {"id": next(_ids), "type": "FILE_CHUNK", "fid": r["fid"], "seq": i,
+                     "data": base64.b64encode(part).decode(), "last": i == len(parts) - 1})
+    return recv_msg(s)
+
+
+def download(s, fid):
+    r = call(s, "FILE_GET", fid=fid)
+    if r["type"] != "OK":
+        return r, None
+    out = b""
+    for _ in range(r["chunks"]):
+        m = recv_msg(s)
+        assert m["type"] == "FILE_CHUNK"
+        out += base64.b64decode(m["data"])
+    return r, out
+
+
+def test_file_to_room_arrives_and_downloads(make_user):
+    a, b = make_user(), make_user()
+    room = "files" + uuid.uuid4().hex[:6]
+    a.join(room), b.join(room)
+    data = bytes(range(256)) * 400                      # 102 400 bytes: several chunks
+    sa, sb = bulk_socket(a), bulk_socket(b)
+    done = upload(sa, data, room=room)
+    assert done["type"] == "OK" and done["size"] == len(data)
+    assert done["name"] == "hello world.txt"            # path stripped
+    note = recv_push(b.room)
+    assert note["kind"] == "room" and note["room"] == room and note["from"] == a.name
+    assert note["file"]["fid"] == done["fid"] and "[file]" in note["text"]
+    meta, got = download(sb, done["fid"])
+    assert got == data and meta["name"] == "hello world.txt"
+    sa.close(), sb.close()
+
+
+def test_file_to_private_message_only_recipient_can_read(make_user):
+    a, b, c = make_user(), make_user(), make_user()
+    sa, sb, sc = bulk_socket(a), bulk_socket(b), bulk_socket(c)
+    done = upload(sa, b"secret notes", to=b.name)
+    assert done["type"] == "OK"
+    note = recv_push(b.pm)
+    assert note["kind"] == "pm" and note["file"]["name"] == "hello world.txt"
+    assert download(sb, done["fid"])[1] == b"secret notes"
+    assert download(sa, done["fid"])[1] == b"secret notes"     # the sender may fetch it again
+    r, _ = download(sc, done["fid"])
+    assert r["type"] == "ERR" and r["code"] == "NOT_ALLOWED"
+    for s in (sa, sb, sc):
+        s.close()
+
+
+def test_file_errors(make_user):
+    a, b = make_user(), make_user(attach=False)
+    s = bulk_socket(a)
+    assert call(s, "FILE_UP", name="x", size=5, room="nowhere")["code"] == "NO_SUCH_ROOM"
+    room = "r" + uuid.uuid4().hex[:6]
+    b.join(room)
+    assert call(s, "FILE_UP", name="x", size=5, room=room)["code"] == "NOT_IN_ROOM"
+    assert call(s, "FILE_UP", name="x", size=5, to="ghost_" + uuid.uuid4().hex[:6])["code"] == "NO_SUCH_USER"
+    assert call(s, "FILE_UP", name="x", size=5, to=b.name)["code"] == "OFFLINE"
+    assert call(s, "FILE_UP", name="x", size=5)["code"] == "BAD_REQUEST"                       # no target
+    assert call(s, "FILE_UP", name="x", size=5, room=room, to=b.name)["code"] == "BAD_REQUEST"  # two targets
+    for size in (0, -1, C.MAX_FILE + 1, "big"):
+        assert call(s, "FILE_UP", name="x", size=size, to=b.name)["code"] == "BAD_REQUEST"
+    assert call(s, "FILE_GET", fid="nope")["code"] == "NO_SUCH_FILE"
+    s.close()
+
+
+def test_file_short_or_out_of_order_upload_is_rejected(make_user):
+    a, b = make_user(), make_user()
+    s = bulk_socket(a)
+    r = call(s, "FILE_UP", name="x", size=10, to=b.name)
+    send_msg(s, {"id": 1, "type": "FILE_CHUNK", "fid": r["fid"], "seq": 0,
+                 "data": base64.b64encode(b"abc").decode(), "last": True})
+    assert recv_msg(s)["code"] == "BAD_REQUEST"               # announced 10, sent 3
+    r = call(s, "FILE_UP", name="x", size=10, to=b.name)
+    send_msg(s, {"id": 2, "type": "FILE_CHUNK", "fid": r["fid"], "seq": 5,
+                 "data": base64.b64encode(b"abc").decode(), "last": False})
+    assert recv_msg(s)["code"] == "BAD_REQUEST"               # wrong sequence number
+    r = call(s, "FILE_UP", name="x", size=10, to=b.name)
+    send_msg(s, {"id": 3, "type": "FILE_CHUNK", "fid": r["fid"], "seq": 0, "data": "!!not base64!!", "last": False})
+    assert recv_msg(s)["code"] == "BAD_REQUEST"
+    s.close()
+
+
+def test_passwords_are_salted_and_server_check_works():
+    sys.path.insert(0, ROOT)
+    from chat import server
+    h1, h2 = server.hash_pw("pw"), server.hash_pw("pw")
+    assert h1 != h2 and h1.startswith("pbkdf2$")                  # same password, different salt
+    assert server.check_pw("pw", h1) and not server.check_pw("nope", h1)
+    assert not server.check_pw("pw", "garbage")
+
+
+def test_accounts_survive_a_restart_with_db(tmp_path):
+    sys.path.insert(0, ROOT)
+    from chat import server
+    old_path, old_users = server.DB_PATH, dict(server.users)
+    try:
+        server.DB_PATH = str(tmp_path / "users.json")
+        server.users.clear()
+        server.users["zed"] = server.hash_pw("pw")
+        with server.lock:
+            server.save_users()
+        server.users.clear()
+        server.load_users()
+        assert server.check_pw("pw", server.users["zed"])
+        (tmp_path / "users.json").write_text("not json")          # a damaged file must not crash the server
+        server.users.clear()
+        server.load_users()
+        assert server.users == {}
+    finally:
+        server.DB_PATH = old_path
+        server.users.clear()
+        server.users.update(old_users)

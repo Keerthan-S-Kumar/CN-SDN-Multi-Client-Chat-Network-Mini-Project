@@ -1,4 +1,4 @@
-# Interface Contract v2 (D1 + D2) — FROZEN: change only by PR approved by all 3
+# Interface Contract v2.1 (D1 + D2 + file sharing) — FROZEN: change only by PR approved by all 3
 
 Everything two people must agree on lives here or in `common/constants.py`.
 If code and this file disagree, this file wins. D2 only **adds** to D1; nothing D1 builds is thrown away.
@@ -52,7 +52,14 @@ Reply: `{"id":n,"type":"OK",...}` or `{"id":n,"type":"ERR","code":"<CODE>","msg"
 **Port 5003 (bulk):** `ATTACH` then `BULK{size}`: server replies `OK` then sends one `{"type":"BULK_DATA","data":"<size bytes of 'x'>"}`
 frame (size ≤ 60000). Used to generate low-priority class traffic.
 
-Error codes: `BAD_REQUEST USER_EXISTS BAD_CREDENTIALS NOT_LOGGED_IN NO_SUCH_ROOM NOT_IN_ROOM NO_SUCH_USER OFFLINE BAD_TOKEN`.
+**File sharing (port 5003, additive in v2.1, same frame format).** Files are held in server memory (at most 50 files and 64 MB; oldest dropped first).
+- `FILE_UP{name,size,room|to}` (exactly one target; `size` 1..`MAX_FILE` = 5 MiB; sender must be in the room, or the recipient online) → `OK{fid,chunk}`.
+- then the client sends `FILE_CHUNK{fid,seq,data,last}` frames in order (`data` = base64 of at most `FILE_CHUNK` = 32 KiB, so a frame stays under 64 KiB). Chunks get no reply; after the chunk with `"last":true` the server replies `OK{fid,name,size}` (or an `ERR`), then pushes a normal `MSG` to the room members or the recipient on 5001/5002 with an extra field `"file":{"fid","name","size"}` and `text` = `"[file] name (N bytes)"` (so clients that ignore `file` still show something readable). A file counts as one message for the spam rule.
+- `FILE_GET{fid}` → `OK{fid,name,size,chunks}` followed by that many `FILE_CHUNK` frames. Allowed for the sender, the PM recipient, or any current member of the room.
+- New error codes: `NO_SUCH_FILE`, `NOT_ALLOWED`. File names are reduced to a plain name (no path, safe characters, 80 chars).
+- The bytes travel on port 5003, so the existing rules already classify them as bulk traffic (Q_BULK).
+
+Error codes: `BAD_REQUEST USER_EXISTS BAD_CREDENTIALS NOT_LOGGED_IN NO_SUCH_ROOM NOT_IN_ROOM NO_SUCH_USER OFFLINE BAD_TOKEN NO_SUCH_FILE NOT_ALLOWED`.
 Names `[A-Za-z0-9_]{1,16}`; rooms created on first JOIN; `ts` = unix seconds (float).
 
 ## 4. Server → controller events (`chat/notifier.py`)

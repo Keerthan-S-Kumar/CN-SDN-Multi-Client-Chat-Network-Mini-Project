@@ -2,10 +2,12 @@
 
 CLI: python3 chat/client.py --server 10.0.0.1 --user alice
 Commands: /register /login /join <room> /leave <room> /list rooms|users
-          /msg <room> <text> /pm <user> <text> /quit
-Opens 5000 (control), then 5001 and 5002 after login using ATTACH.
+          /msg <room> <text> /pm <user> <text> /sendroom <room> <file> /sendpm <user> <file>
+          /get <file id> [folder] /quit
+Opens 5000 (control), then 5001, 5002 and 5003 (files) after login using ATTACH.
 """
 import argparse
+import base64
 import os
 import socket
 import sys
@@ -13,7 +15,7 @@ import threading
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from chat.protocol import send_msg, recv_msg  # noqa: E402
-from common.constants import PORT_CONTROL, PORT_ROOM, PORT_PM, SERVER_IP  # noqa: E402
+from common.constants import FILE_CHUNK, MAX_FILE, PORT_BULK, PORT_CONTROL, PORT_ROOM, PORT_PM, SERVER_IP  # noqa: E402
 
 HELP = """commands:
   /register <user> <password>   create an account and log in
@@ -23,6 +25,9 @@ HELP = """commands:
   /room <room>                  switch your current room (must be joined)
   /msg <room> <text>            send a message to a specific room
   /pm <user> <text>             private message
+  /sendroom <room> <file>       share a file with a room (up to 5 MB)
+  /sendpm <user> <file>         share a file privately
+  /get <file id> [folder]       download a shared file (the id is shown with the notice)
   /list users|rooms             show who is online / which rooms exist
   /help                         show this help
   /quit                         exit
@@ -40,6 +45,8 @@ class Client:
         self.ctl = None
         self.room_sock = None
         self.pm_sock = None
+        self.bulk_sock = None
+        self.bulk_lock = threading.Lock()
 
     def rid(self):
         n = self.next_id
@@ -67,8 +74,15 @@ class Client:
             print(f"! {r['code']}: {r.get('msg', '')}")
             return False
         self.user, self.token = user, r["token"]
+        if not self.attach_all():
+            return False
+        print(f"logged in as {user}")
+        return True
+
+    def attach_all(self):
+        """ATTACH on 5001 and 5002 (with listener threads) and on 5003 (request and reply, for files)."""
         socks = []
-        for port in (PORT_ROOM, PORT_PM):
+        for port in (PORT_ROOM, PORT_PM, PORT_BULK):
             s = socket.create_connection((self.server, port), timeout=5)
             s.settimeout(None)
             a = self.call(s, "ATTACH", token=self.token)
@@ -76,10 +90,9 @@ class Client:
                 print(f"! attach failed on {port}: {a['code']}")
                 return False
             socks.append(s)
-        self.room_sock, self.pm_sock = socks
-        for s in socks:
+        self.room_sock, self.pm_sock, self.bulk_sock = socks
+        for s in socks[:2]:
             threading.Thread(target=self.listen, args=(s,), daemon=True).start()
-        print(f"logged in as {user}")
         return True
 
     def auto_login(self, user, password):
@@ -93,18 +106,8 @@ class Client:
         # REGISTER succeeded and already logged us in on this connection;
         # we still need ATTACH, so reuse the token
         self.user, self.token = user, r["token"]
-        socks = []
-        for port in (PORT_ROOM, PORT_PM):
-            s = socket.create_connection((self.server, port), timeout=5)
-            s.settimeout(None)
-            a = self.call(s, "ATTACH", token=self.token)
-            if a["type"] == "ERR":
-                print(f"! attach failed on {port}: {a['code']}")
-                return False
-            socks.append(s)
-        self.room_sock, self.pm_sock = socks
-        for s in socks:
-            threading.Thread(target=self.listen, args=(s,), daemon=True).start()
+        if not self.attach_all():
+            return False
         print(f"logged in as {user}")
         return True
 
@@ -114,10 +117,11 @@ class Client:
             while self.running:
                 m = recv_msg(sock)
                 if m.get("type") == "MSG":
+                    tail = f"  -> /get {m['file']['fid']}" if m.get("file") else ""
                     if m.get("kind") == "room":
-                        print(f"\n[{m['room']}] {m['from']}: {m['text']}")
+                        print(f"\n[{m['room']}] {m['from']}: {m['text']}{tail}")
                     else:
-                        print(f"\n[PM from {m['from']}] {m['text']}")
+                        print(f"\n[PM from {m['from']}] {m['text']}{tail}")
                 elif m.get("type") == "ERR":
                     print(f"\n! {m['code']}: {m.get('msg', '')}")
                 if m.get("type") in ("MSG", "ERR"):
@@ -142,6 +146,49 @@ class Client:
             return
         self.send_only(self.room_sock, "MSG_ROOM", room=self.room, text=text)
         print(f"[{self.room}] me: {text}")
+
+    # ---- files (port 5003) ----
+    def send_file(self, path, **target):
+        try:
+            size = os.path.getsize(path)
+            with open(path, "rb") as f:
+                data = f.read(MAX_FILE + 1)
+        except OSError as e:
+            print(f"! cannot read {path}: {e}")
+            return
+        if not 0 < len(data) <= MAX_FILE:
+            print(f"! a file must be 1 byte to {MAX_FILE // (1024 * 1024)} MB")
+            return
+        with self.bulk_lock:
+            r = self.call(self.bulk_sock, "FILE_UP", name=os.path.basename(path), size=size, **target)
+            if r["type"] == "ERR":
+                print(f"! {r['code']}: {r.get('msg', '')}")
+                return
+            parts = [data[i:i + FILE_CHUNK] for i in range(0, len(data), FILE_CHUNK)]
+            for i, part in enumerate(parts):
+                send_msg(self.bulk_sock, {"id": self.rid(), "type": "FILE_CHUNK", "fid": r["fid"], "seq": i,
+                                          "data": base64.b64encode(part).decode(), "last": i == len(parts) - 1})
+            done = recv_msg(self.bulk_sock)
+        if done["type"] == "OK":
+            print(f"sent {done['name']} ({done['size']} bytes), file id {done['fid']}")
+        else:
+            print(f"! {done['code']}: {done.get('msg', '')}")
+
+    def get_file(self, fid, folder="."):
+        with self.bulk_lock:
+            r = self.call(self.bulk_sock, "FILE_GET", fid=fid)
+            if r["type"] == "ERR":
+                print(f"! {r['code']}: {r.get('msg', '')}")
+                return
+            data = b"".join(base64.b64decode(recv_msg(self.bulk_sock)["data"]) for _ in range(r["chunks"]))
+        out = os.path.join(folder, r["name"])
+        try:
+            with open(out, "wb") as f:
+                f.write(data)
+        except OSError as e:
+            print(f"! cannot write {out}: {e}")
+            return
+        print(f"saved {out} ({len(data)} bytes)")
 
     def command(self, line):
         """Return False to quit."""
@@ -186,6 +233,10 @@ class Client:
         elif cmd == "/pm" and len(parts) >= 3:
             self.send_only(self.pm_sock, "MSG_PM", to=parts[1], text=parts[2])
             print(f"[PM to {parts[1]}] {parts[2]}")
+        elif cmd in ("/sendroom", "/sendpm") and len(parts) >= 3:
+            self.send_file(parts[2], **({"room": parts[1]} if cmd == "/sendroom" else {"to": parts[1]}))
+        elif cmd == "/get" and len(parts) >= 2:
+            self.get_file(parts[1], parts[2] if len(parts) > 2 else ".")
         elif cmd == "/list" and len(parts) >= 2:
             r = self.call(self.ctl, "LIST", what=parts[1])
             if r["type"] == "OK":
@@ -218,7 +269,7 @@ class Client:
 
     def close(self):
         self.running = False
-        for s in (self.ctl, self.room_sock, self.pm_sock):
+        for s in (self.ctl, self.room_sock, self.pm_sock, self.bulk_sock):
             if s:
                 try:
                     s.close()

@@ -1,12 +1,13 @@
 """Browser front end for the chat. OWNER: B (extra, not part of the frozen contract).
 
-Each browser session gets its own real TCP connections (5000 control, 5001 room, 5002 PM) to the chat server, using
+Each browser session gets its own real TCP connections (5000 control, 5001 room, 5002 PM, 5003 files) to the chat server, using
 the same protocol as chat/client.py. So the SDN gate still applies: the server sees this machine's IP, and the
 controller allows, queues, throttles or blocks that IP exactly as it would for a terminal client.
 
   python3 chat/web_gateway.py --server 10.0.0.1 --port 8000        # then open http://localhost:8000
 """
 import argparse
+import base64
 import json
 import os
 import queue
@@ -16,10 +17,10 @@ import threading
 import time
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 from chat.protocol import recv_msg, send_msg
-from common.constants import CONTROLLER_URL, PORT_CONTROL, PORT_PM, PORT_ROOM
+from common.constants import CONTROLLER_URL, FILE_CHUNK, MAX_FILE, PORT_BULK, PORT_CONTROL, PORT_PM, PORT_ROOM
 
 PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web", "index.html")
 CONTROLLER = CONTROLLER_URL     # where /snapshot and /metrics are read for the network card
@@ -45,7 +46,8 @@ class Session:
         self.rooms = []
         self._id = 0
         self._lock = threading.Lock()
-        self.ctl = self.room_sock = self.pm_sock = None
+        self.ctl = self.room_sock = self.pm_sock = self.bulk_sock = None
+        self._bulk_lock = threading.Lock()
 
     def _rid(self):
         self._id += 1
@@ -68,13 +70,14 @@ class Session:
                 raise GatewayError(r["code"], r.get("msg", ""))
             self.user, self.token = user, r["token"]
             socks = []
-            for port in (PORT_ROOM, PORT_PM):
+            for port in (PORT_ROOM, PORT_PM, PORT_BULK):
                 s = self._connect(port)
                 a = self._call(s, "ATTACH", token=self.token)
                 if a["type"] == "ERR":
                     raise GatewayError(a["code"], a.get("msg", ""))
                 socks.append(s)
-            self.room_sock, self.pm_sock = socks
+            self.room_sock, self.pm_sock, self.bulk_sock = socks
+            socks = socks[:2]                       # only room and PM sockets get a listener thread
         except (OSError, ConnectionError, ValueError):
             self.close()
             raise GatewayError("SERVER_UNREACHABLE", "The chat server did not answer. Is it running, and does the network allow this host?")
@@ -105,6 +108,36 @@ class Session:
             raise GatewayError(r["code"], r.get("msg", ""))
         return r
 
+    def upload(self, name, data, **target):
+        """Send one file to the chat server over port 5003 (chunked, base64). Returns the server's final reply."""
+        with self._bulk_lock:
+            try:
+                r = self._call(self.bulk_sock, "FILE_UP", name=name, size=len(data), **target)
+                if r["type"] == "ERR":
+                    raise GatewayError(r["code"], r.get("msg", ""))
+                parts = [data[i:i + FILE_CHUNK] for i in range(0, len(data), FILE_CHUNK)]
+                for i, part in enumerate(parts):
+                    send_msg(self.bulk_sock, {"id": self._rid(), "type": "FILE_CHUNK", "fid": r["fid"], "seq": i,
+                                              "data": base64.b64encode(part).decode(), "last": i == len(parts) - 1})
+                done = recv_msg(self.bulk_sock)
+            except (OSError, ConnectionError, ValueError):
+                raise GatewayError("SERVER_UNREACHABLE", "Lost the connection to the chat server.")
+        if done["type"] == "ERR":
+            raise GatewayError(done["code"], done.get("msg", ""))
+        return done
+
+    def download(self, fid):
+        """Fetch a shared file from the chat server. Returns (name, bytes)."""
+        with self._bulk_lock:
+            try:
+                r = self._call(self.bulk_sock, "FILE_GET", fid=fid)
+                if r["type"] == "ERR":
+                    raise GatewayError(r["code"], r.get("msg", ""))
+                data = b"".join(base64.b64decode(recv_msg(self.bulk_sock)["data"]) for _ in range(r["chunks"]))
+            except (OSError, ConnectionError, ValueError):
+                raise GatewayError("SERVER_UNREACHABLE", "Lost the connection to the chat server.")
+        return r["name"], data
+
     def send(self, sock, type_, **fields):
         try:
             send_msg(sock, {"id": self._rid(), "type": type_, **fields})
@@ -113,7 +146,7 @@ class Session:
 
     def close(self):
         self.closed = True
-        for s in (self.ctl, self.room_sock, self.pm_sock):
+        for s in (self.ctl, self.room_sock, self.pm_sock, self.bulk_sock):
             try:
                 if s:
                     s.close()
@@ -218,9 +251,22 @@ def make_handler(server_ip):
             elif u.path == "/healthz":
                 self._json({"ok": True, "sessions": len(SESSIONS), "server": server_ip})
             elif u.path == "/api/info":
-                self._json({"server": server_ip, "ports": [PORT_CONTROL, PORT_ROOM, PORT_PM]})
+                self._json({"server": server_ip, "ports": [PORT_CONTROL, PORT_ROOM, PORT_PM, PORT_BULK]})
             elif u.path == "/api/events":
                 self._sse(parse_qs(u.query).get("sid", [""])[0])
+            elif u.path == "/api/download":
+                q = parse_qs(u.query)
+                try:
+                    name, data = self._session(q.get("sid", [""])[0]).download(q.get("fid", [""])[0])
+                except GatewayError as e:
+                    return self._fail(e, 401 if e.code == "NOT_LOGGED_IN" else 404 if e.code == "NO_SUCH_FILE" else 400)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/octet-stream")
+                self.send_header("Content-Disposition", "attachment; filename*=UTF-8''" + quote(name))
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.end_headers()
+                self.wfile.write(data)
             else:
                 self._json({"ok": False, "code": "NOT_FOUND"}, 404)
 
@@ -249,9 +295,27 @@ def make_handler(server_ip):
             except (OSError, ValueError):
                 pass
 
+        def _upload(self, q):
+            """Raw request body = the file. Target and name come from the query string."""
+            n = int(self.headers.get("Content-Length") or 0)
+            if n <= 0 or n > MAX_FILE:
+                left = n if n <= 4 * MAX_FILE else 0          # read and drop a too-big body so the reply can be delivered
+                while left > 0:
+                    left -= len(self.rfile.read(min(65536, left)))
+                if n > 4 * MAX_FILE:
+                    self.close_connection = True
+                raise GatewayError("BAD_REQUEST", "A file must be 1 byte to %d MB." % (MAX_FILE // (1024 * 1024)))
+            data = self.rfile.read(n)
+            s = self._session(q.get("sid", [""])[0])
+            target = {"room": q["room"][0]} if "room" in q else {"to": q.get("to", [""])[0]}
+            done = s.upload(q.get("name", ["file"])[0], data, **target)
+            self._json({"ok": True, "file": {"fid": done["fid"], "name": done["name"], "size": done["size"]}})
+
         def do_POST(self):
             path = urlparse(self.path).path
             try:
+                if path == "/api/upload":
+                    return self._upload(parse_qs(urlparse(self.path).query))
                 d = self._body()
                 if path == "/api/login":
                     mode = d.get("mode")

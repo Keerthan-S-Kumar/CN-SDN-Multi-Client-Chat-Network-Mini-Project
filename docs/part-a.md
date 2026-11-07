@@ -10,7 +10,7 @@ Shared, frozen files used but not changed: `chat/protocol.py` (framing), `chat/n
 - **Shared state:** users, tokens, online users, rooms and the attached connections of each port live in dictionaries protected by one lock. Each connection also has its own send lock, so two threads pushing messages to the same client cannot interleave their frames.
 - **Login flow:** `REGISTER` or `LOGIN` on port 5000 returns a token. Connections to 5001, 5002 and 5003 send `ATTACH` with that token before anything else. When the 5000 connection closes, the user's token, room memberships and attached connections are removed and a `disconnect` event is sent.
 - **Robustness:** a bad frame closes only that connection, errors return an `ERR` code from the contract, and every connection handler cleans up in a `finally` block, so one bad client cannot crash the server.
-- **Limits:** names are `[A-Za-z0-9_]{1,16}`, frames are at most 64 KiB, and bulk size is 1 to 60000.
+- **Limits:** names are `[A-Za-z0-9_]{1,16}`, frames are at most 64 KiB, bulk size is 1 to 60000, and shared files are 1 byte to 5 MiB (see "File sharing" in `docs/interfaces.md`). Passwords are stored as salted PBKDF2-SHA256 hashes; start the server with `--db accounts.json` to keep accounts between restarts.
 
 ## 2. Protocol
 
@@ -51,7 +51,7 @@ Only failed `LOGIN` attempts count. After 5 consecutive `BAD_CREDENTIALS` from o
 
 ## 6. Client (`chat/client.py`)
 
-`python3 chat/client.py --server 10.0.0.1 --user alice` registers (or logs in if the name exists) and opens the three connections. Commands: `/register`, `/login`, `/join`, `/leave`, `/room`, `/msg`, `/pm`, `/list users|rooms`, `/help`, `/quit`. Background threads print incoming messages while the main thread reads the keyboard. Anything typed without `/` goes to the current room.
+`python3 chat/client.py --server 10.0.0.1 --user alice` registers (or logs in if the name exists) and opens the three connections. Commands: `/register`, `/login`, `/join`, `/leave`, `/room`, `/msg`, `/pm`, `/sendroom <room> <file>`, `/sendpm <user> <file>`, `/get <file id> [folder]`, `/list users|rooms`, `/help`, `/quit`. Background threads print incoming messages while the main thread reads the keyboard. Anything typed without `/` goes to the current room.
 
 ## 7. Load generator (`chat/bot.py`)
 

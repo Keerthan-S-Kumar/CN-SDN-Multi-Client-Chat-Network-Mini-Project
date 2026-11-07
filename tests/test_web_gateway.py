@@ -157,3 +157,46 @@ def test_network_card_with_traffic_and_reason(base):
     finally:
         fake.shutdown()
         web_gateway.CONTROLLER = old
+
+
+def upload_raw(base, sid, data, name="note.txt", **target):
+    q = "&".join("%s=%s" % (k, v) for k, v in dict(sid=sid, name=name, **target).items())
+    req = urllib.request.Request(base + "/api/upload?" + q, data=data, method="POST",
+                                 headers={"Content-Type": "application/octet-stream"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        return json.load(e)
+
+
+def test_file_upload_notifies_and_downloads(base):
+    a = post(base, "login", mode="register", user="fa_w", password="pw")["sid"]
+    b = post(base, "login", mode="register", user="fb_w", password="pw")["sid"]
+    c = post(base, "login", mode="register", user="fc_w", password="pw")["sid"]
+    for sid in (a, b):
+        assert post(base, "join", sid=sid, room="files_w")["ok"]
+    data = os.urandom(150_000)
+    up = upload_raw(base, a, data, name="data.bin", room="files_w")
+    assert up["ok"] and up["file"]["size"] == len(data) and up["file"]["name"] == "data.bin"
+    ev = read_events(base, b, lambda m: m.get("file"))
+    assert ev and ev["file"]["fid"] == up["file"]["fid"] and ev["room"] == "files_w"
+    got = urllib.request.urlopen(base + "/api/download?sid=%s&fid=%s" % (b, up["file"]["fid"])).read()
+    assert got == data
+    try:                                            # c never joined the room
+        urllib.request.urlopen(base + "/api/download?sid=%s&fid=%s" % (c, up["file"]["fid"]))
+        assert False, "outsider must not download"
+    except urllib.error.HTTPError as e:
+        assert e.code == 400 and json.load(e)["code"] == "NOT_ALLOWED"
+
+
+def test_file_upload_private_and_errors(base):
+    a = post(base, "login", mode="register", user="pa_w", password="pw")["sid"]
+    post(base, "login", mode="register", user="pb_w", password="pw")
+    up = upload_raw(base, a, b"hello", to="pb_w")
+    assert up["ok"] and up["file"]["size"] == 5
+    assert upload_raw(base, a, b"x", to="nobody_zz")["code"] == "NO_SUCH_USER"
+    assert upload_raw(base, a, b"x", room="not_a_room")["code"] == "NO_SUCH_ROOM"
+    assert upload_raw(base, "bad-sid", b"x", to="pb_w")["code"] == "NOT_LOGGED_IN"
+    too_big = upload_raw(base, a, b"x" * (web_gateway.MAX_FILE + 1), to="pb_w")
+    assert too_big["code"] == "BAD_REQUEST"

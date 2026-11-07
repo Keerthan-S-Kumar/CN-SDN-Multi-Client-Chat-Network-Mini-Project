@@ -104,6 +104,17 @@
   .msg.mine .head b { color:var(--accent); }
   .msg.pm .body { background:var(--pm-soft); padding:6px 10px; border-radius:4px 12px 12px 12px; display:inline-block; border:1px solid rgba(165,139,250,.3); }
   .msg:not(.pm) .body { color:#dfe7fb; }
+  .filecard { display:inline-flex; align-items:center; gap:12px; padding:9px 12px; border:1px solid var(--rule); border-radius:12px; background:linear-gradient(180deg,#14203f,#101a36); max-width:100%; }
+  .filecard .ico { width:36px; height:36px; border-radius:9px; background:var(--accent-soft); color:var(--accent); display:grid; place-items:center; flex:none; font-weight:700; font-size:.72rem; }
+  .filecard .meta { min-width:0; } .filecard .meta b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:30ch; }
+  .filecard .meta span { color:var(--muted); font-size:.82rem; }
+  .filecard a, .filecard .state { margin-left:6px; font-weight:650; font-size:.88rem; color:var(--accent); text-decoration:none; white-space:nowrap; }
+  .filecard a:hover { text-decoration:underline; }
+  .progress { height:4px; border-radius:2px; background:var(--rule); margin-top:6px; overflow:hidden; } .progress i { display:block; height:100%; width:0; background:var(--accent); transition:width .15s; }
+  #drop { position:absolute; inset:0; display:none; place-items:center; background:rgba(8,13,28,.82); border:2px dashed var(--accent); border-radius:14px; margin:10px; font-weight:650; font-size:1.1rem; color:var(--accent); z-index:4; }
+  .thread-wrap.over #drop { display:grid; }
+  .tools .clip { border:0; background:transparent; padding:3px 7px; border-radius:6px; color:var(--muted); display:inline-grid; place-items:center; }
+  .tools .clip:hover:not(:disabled) { background:var(--accent-soft); color:var(--accent); } .tools .clip:disabled { opacity:.4; cursor:not-allowed; }
   .sys { text-align:center; color:var(--muted); font-size:.88rem; margin:10px 0; }
   .bad-line { text-align:center; color:var(--bad); font-weight:600; font-size:.9rem; margin:10px 0; }
   .blank { max-width:36ch; margin:12vh auto 0; text-align:center; color:var(--muted); }
@@ -213,12 +224,12 @@
       <span class="pill netchip" id="netchip" hidden></span>
     </header>
     <div class="alert" id="netAlert" role="status" hidden></div>
-    <div class="thread-wrap"><div id="thread" aria-live="polite"></div><button id="jump" type="button" hidden>New messages</button></div>
+    <div class="thread-wrap" id="twrap"><div id="thread" aria-live="polite"></div><div id="drop">Drop a file to share it (up to 5 MB)</div><button id="jump" type="button" hidden>New messages</button></div>
     <form id="send">
       <div class="composer">
         <label class="sr" for="msg">Message</label>
         <textarea id="msg" rows="1" placeholder="Write a message" disabled maxlength="2000"></textarea>
-        <div class="tools" id="emos"><span class="hint">Enter to send, Shift+Enter for a new line</span><button class="btn primary" type="submit" id="sbtn" disabled>Send</button></div>
+        <div class="tools" id="emos"><button type="button" class="clip" id="clip" title="Share a file (up to 5 MB)" aria-label="Share a file" disabled><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.6-8.6a3.7 3.7 0 015.2 5.2l-8.6 8.6a1.8 1.8 0 01-2.6-2.6l7.9-7.9"/></svg></button><input type="file" id="pick" hidden><span class="hint">Enter to send, Shift+Enter for a new line</span><button class="btn primary" type="submit" id="sbtn" disabled>Send</button></div>
       </div>
     </form>
   </main>
@@ -316,10 +327,45 @@
         if (m.kind === "pm") { h.appendChild(el("span", "pill pm", "private")); }
         col.appendChild(h);
       }
-      col.appendChild(el("div", "body", m.text));
+      if (m.file) { col.appendChild(fileCard(m)); } else { col.appendChild(el("div", "body", m.text)); }
       row.appendChild(col); t.appendChild(row); prev = m;
     });
     if (force || near) { t.scrollTop = t.scrollHeight; $("jump").hidden = true; } else { $("jump").hidden = false; }
+  }
+
+  /* ---------- files ---------- */
+  function size(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(2) + " MB"; }
+  function fileCard(m) {
+    var c = el("div", "filecard"), f = m.file, ext = (f.name.split(".").pop() || "file").slice(0, 4).toUpperCase();
+    c.appendChild(el("span", "ico", ext));
+    var meta = el("div", "meta"); meta.appendChild(el("b", "", f.name));
+    meta.appendChild(el("span", "", size(f.size) + (m.pending ? " , sending" : "")));
+    if (m.pending) { var pr = el("div", "progress"), bar = el("i"); bar.style.width = (m.progress || 0) + "%"; pr.appendChild(bar); meta.appendChild(pr); }
+    c.appendChild(meta);
+    if (m.failed) { c.appendChild(el("span", "state", "Not sent")); }
+    else if (!m.pending) {
+      var a = el("a", "", "Download"); a.href = "/api/download?sid=" + encodeURIComponent(sid) + "&fid=" + encodeURIComponent(f.fid); a.setAttribute("download", f.name); c.appendChild(a);
+    }
+    return c;
+  }
+  var MAX_FILE = 5 * 1024 * 1024;
+  function uploadFile(file) {
+    if (!cur || cur.indexOf("browse:") === 0) { return; }
+    if (file.size < 1 || file.size > MAX_FILE) { add(cur, {kind: "bad", text: file.size ? "That file is over 5 MB. Pick a smaller one." : "That file is empty."}); return; }
+    var room = cur.indexOf("room:") === 0, name = cur.slice(cur.indexOf(":") + 1), key = cur;
+    var item = {kind: room ? "msg" : "pm", who: me, mine: true, text: "[file] " + file.name, file: {fid: "", name: file.name, size: file.size}, pending: true, progress: 0};
+    add(key, item); drawThread(true);
+    var x = new XMLHttpRequest();
+    x.open("POST", "/api/upload?sid=" + encodeURIComponent(sid) + "&name=" + encodeURIComponent(file.name) + "&" + (room ? "room=" : "to=") + encodeURIComponent(name));
+    x.upload.onprogress = function (e) { if (e.lengthComputable) { item.progress = Math.round(e.loaded / e.total * 100); if (key === cur) { drawThread(false); } } };
+    x.onload = function () {
+      var r = {}; try { r = JSON.parse(x.responseText); } catch (e) { /* not JSON */ }
+      item.pending = false;
+      if (r.ok) { item.file = r.file; } else { item.failed = true; add(key, {kind: "bad", text: say(r)}); }
+      if (key === cur) { drawThread(false); }
+    };
+    x.onerror = function () { item.pending = false; item.failed = true; add(key, {kind: "bad", text: WORDS.SERVER_UNREACHABLE}); if (key === cur) { drawThread(false); } };
+    x.send(file);
   }
 
   /* ---------- sidebar ---------- */
@@ -358,7 +404,7 @@
     $("tt").textContent = room ? "# " + name : name;
     var pill = $("tpill"); pill.hidden = false; pill.className = "pill " + (room ? "room" : "pm"); pill.textContent = room ? "Room" : "Private";
     $("ts").textContent = room ? "Everyone in this room sees your messages" : (people.indexOf(name) >= 0 ? "Online. Only you two can read this" : "Offline. Messages cannot be delivered right now");
-    $("msg").disabled = false; $("sbtn").disabled = false; $("msg").focus();
+    $("msg").disabled = false; $("sbtn").disabled = false; $("clip").disabled = false; $("msg").focus();
     drawNav(); drawThread(true);
   }
 
@@ -456,8 +502,8 @@
     es.onmessage = function (ev) {
       var m = JSON.parse(ev.data);
       if (m.type === "MSG") {
-        if (m.kind === "room") { add("room:" + m.room, {kind: "msg", who: m.from, text: m.text, ts: m.ts}); }
-        else { add("pm:" + m.from, {kind: "pm", who: m.from, text: m.text, ts: m.ts}); }
+        if (m.kind === "room") { add("room:" + m.room, {kind: "msg", who: m.from, text: m.text, ts: m.ts, file: m.file}); }
+        else { add("pm:" + m.from, {kind: "pm", who: m.from, text: m.text, ts: m.ts, file: m.file}); }
       } else if (m.type === "ERR") {
         add(cur || "room:", {kind: "bad", text: say(m)});
       } else if (m.type === "CLOSED") { $("conn").hidden = false; }
@@ -503,6 +549,13 @@
   });
   $("thread").addEventListener("scroll", function () { var t = $("thread"); if (t.scrollHeight - t.scrollTop - t.clientHeight < 80) { $("jump").hidden = true; } });
   $("jump").onclick = function () { var t = $("thread"); t.scrollTop = t.scrollHeight; $("jump").hidden = true; };
+  $("clip").onclick = function () { $("pick").click(); };
+  $("pick").addEventListener("change", function () { var f = $("pick").files[0]; $("pick").value = ""; if (f) { uploadFile(f); } });
+  var tw = $("twrap"), depth = 0;
+  tw.addEventListener("dragenter", function (e) { if (cur && e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, "Files") >= 0) { depth++; tw.classList.add("over"); e.preventDefault(); } });
+  tw.addEventListener("dragover", function (e) { if (tw.classList.contains("over")) { e.preventDefault(); } });
+  tw.addEventListener("dragleave", function () { depth = Math.max(0, depth - 1); if (!depth) { tw.classList.remove("over"); } });
+  tw.addEventListener("drop", function (e) { e.preventDefault(); depth = 0; tw.classList.remove("over"); var f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) { uploadFile(f); } });
   $("menu").onclick = function () { $("rail").classList.toggle("open"); };
   $("out").onclick = function () { if (es) { es.close(); } timers.forEach(clearInterval); api("logout").then(function () { location.reload(); }); };
   window.addEventListener("beforeunload", function () {

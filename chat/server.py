@@ -1,8 +1,12 @@
 """Chat server (Part A). Implements docs/interfaces.md sections 2-4.
-Ports: 5000 control, 5001 room chat, 5002 private messages.
+Ports: 5000 control, 5001 room chat, 5002 private messages, 5003 bulk and file transfer.
 """
 import argparse
+import base64
+import binascii
 import hashlib
+import hmac
+import json
 import os
 import re
 import secrets
@@ -15,7 +19,7 @@ import traceback
 # make `chat.protocol` importable when running `python3 chat/server.py`
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from chat.protocol import send_msg, recv_msg  # noqa: E402
-from common.constants import MAX_BULK, MAX_BAD_LOGINS  # noqa: E402
+from common.constants import MAX_BULK, MAX_BAD_LOGINS, MAX_FILE, FILE_CHUNK  # noqa: E402
 from chat.spam import SpamDetector  # noqa: E402
 from chat.notifier import notify  # noqa: E402
 
@@ -27,7 +31,10 @@ NAME_RE = re.compile(r"^[A-Za-z0-9_]{1,16}$")
 lock = threading.RLock()
 spam = SpamDetector()
 bad_logins = {}                   # ip -> consecutive bad logins
-users = {}                        # name -> sha256(password)
+users = {}                        # name -> "pbkdf2$<salt hex>$<hash hex>" (see hash_pw)
+files = {}                        # fid -> shared file (in memory, oldest dropped first)
+FILE_LIMIT, STORE_LIMIT = 50, 64 * 1024 * 1024
+DB_PATH = None                    # set by --db: accounts are saved there and survive a restart
 tokens = {}                       # token -> name
 online = {}                       # name -> Conn on port 5000
 rooms = {}                        # room -> set of names
@@ -40,6 +47,7 @@ class Conn:
         self.ip = addr[0]
         self.user = None
         self.send_lock = threading.Lock()
+        self.upload = None
 
     def send(self, obj):
         with self.send_lock:
@@ -67,8 +75,48 @@ def err(conn, req, code, msg=""):
     conn.send({"id": req.get("id"), "type": "ERR", "code": code, "msg": msg})
 
 
-def hash_pw(pw):
-    return hashlib.sha256(pw.encode()).hexdigest()
+PBKDF2_ROUNDS = 20_000
+
+
+def hash_pw(pw, salt=None):
+    """Salted PBKDF2-SHA256. The salt is stored inside the result so a login can recompute it."""
+    salt = salt if salt is not None else secrets.token_bytes(16)
+    h = hashlib.pbkdf2_hmac("sha256", pw.encode(), salt, PBKDF2_ROUNDS)
+    return "pbkdf2$%s$%s" % (salt.hex(), h.hex())
+
+
+def check_pw(pw, stored):
+    try:
+        _, salt, _ = stored.split("$")
+        return hmac.compare_digest(hash_pw(pw, bytes.fromhex(salt)), stored)
+    except (ValueError, AttributeError):
+        return False
+
+
+def save_users():
+    """Write accounts to --db (atomic replace). Called with `lock` held. Never raises."""
+    if not DB_PATH:
+        return
+    try:
+        tmp = DB_PATH + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(users, f)
+        os.replace(tmp, DB_PATH)
+    except OSError as e:
+        print(f"[db] could not save accounts: {e}")
+
+
+def load_users():
+    try:
+        with open(DB_PATH) as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            users.update({k: v for k, v in data.items() if isinstance(k, str) and isinstance(v, str)})
+        print(f"[db] loaded {len(users)} accounts from {DB_PATH}")
+    except FileNotFoundError:
+        pass
+    except (OSError, ValueError) as e:
+        print(f"[db] could not read {DB_PATH}: {e}")
 
 
 def push(kind, name, obj):
@@ -95,13 +143,18 @@ def handle_control(conn, req):
             return err(conn, req, "BAD_REQUEST", "already logged in")
         code = None
         with lock:
+            stored = users.get(user)
+        hashed = hash_pw(pw) if t == "REGISTER" else None        # slow hashing happens outside the lock
+        login_ok = t == "LOGIN" and stored is not None and check_pw(pw, stored)
+        with lock:
             if t == "REGISTER" and user in users:
                 code = "USER_EXISTS"
-            elif t == "LOGIN" and users.get(user) != hash_pw(pw):
+            elif t == "LOGIN" and not login_ok:
                 code = "BAD_CREDENTIALS"
             else:
                 if t == "REGISTER":
-                    users[user] = hash_pw(pw)
+                    users[user] = hashed
+                    save_users()
                 token = secrets.token_hex(8)
                 tokens[token] = user
                 online[user] = conn
@@ -177,8 +230,114 @@ def handle_attach(conn, req, port):
         return err(conn, req, "BAD_TOKEN")
     return ok(conn, req)
 
+def safe_name(name):
+    """A file name with no path and only plain characters, at most 80 long."""
+    name = os.path.basename(str(name).replace("\\", "/"))
+    name = re.sub(r"[^A-Za-z0-9._ -]", "_", name).strip(" .")[:80]
+    return name or "file"
+
+
+def store_file(rec):
+    """Keep a shared file in memory; drop the oldest ones past the count or byte limit."""
+    with lock:
+        files[rec["fid"]] = rec
+        while len(files) > FILE_LIMIT or sum(f["size"] for f in files.values()) > STORE_LIMIT:
+            files.pop(next(iter(files)))
+
+
+def can_read(user, rec):
+    with lock:
+        if rec["room"]:
+            return user in rooms.get(rec["room"], ())
+    return user in (rec["owner"], rec["to"])
+
+
+def handle_file_up(conn, req):
+    name, size = safe_name(req.get("name", "file")), req.get("size")
+    room, to = req.get("room"), req.get("to")
+    if not (isinstance(size, int) and not isinstance(size, bool) and 0 < size <= MAX_FILE):
+        return err(conn, req, "BAD_REQUEST", f"size must be 1..{MAX_FILE}")
+    if (room is None) == (to is None):
+        return err(conn, req, "BAD_REQUEST", "give exactly one of room or to")
+    with lock:
+        if room is not None:
+            members = rooms.get(room) if isinstance(room, str) else None
+            if members is None:
+                return err(conn, req, "NO_SUCH_ROOM")
+            if conn.user not in members:
+                return err(conn, req, "NOT_IN_ROOM")
+        else:
+            if not (isinstance(to, str) and to in users):
+                return err(conn, req, "NO_SUCH_USER")
+            if to not in attached["pm"]:
+                return err(conn, req, "OFFLINE")
+    fid = secrets.token_hex(6)
+    conn.upload = {"fid": fid, "name": name, "size": size, "room": room, "to": to, "buf": bytearray(), "next": 0}
+    return ok(conn, req, fid=fid, chunk=FILE_CHUNK)
+
+
+def handle_file_chunk(conn, req):
+    up = getattr(conn, "upload", None)
+    if not up or req.get("fid") != up["fid"]:
+        return err(conn, req, "BAD_REQUEST", "no upload in progress")
+    try:
+        data = base64.b64decode(req.get("data", ""), validate=True)
+    except (binascii.Error, ValueError, TypeError):
+        conn.upload = None
+        return err(conn, req, "BAD_REQUEST", "chunk is not base64")
+    if req.get("seq") != up["next"] or len(data) > FILE_CHUNK or len(up["buf"]) + len(data) > up["size"]:
+        conn.upload = None
+        return err(conn, req, "BAD_REQUEST", "chunk out of order or too large")
+    up["buf"] += data
+    up["next"] += 1
+    if not req.get("last"):
+        return
+    conn.upload = None
+    if len(up["buf"]) != up["size"]:
+        return err(conn, req, "BAD_REQUEST", "file is shorter than announced")
+    rec = {"fid": up["fid"], "name": up["name"], "size": up["size"], "owner": conn.user, "room": up["room"],
+           "to": up["to"], "data": bytes(up["buf"]), "ts": time.time()}
+    store_file(rec)
+    if spam.record(conn.user, rec["ts"]):          # a file counts as a message for the spam rule
+        emit("flag", conn.user, conn.ip, reason="spam")
+    note = {"type": "MSG", "kind": "room" if rec["room"] else "pm", "from": conn.user,
+            "text": "[file] %s (%d bytes)" % (rec["name"], rec["size"]), "ts": rec["ts"],
+            "file": {"fid": rec["fid"], "name": rec["name"], "size": rec["size"]}}
+    if rec["room"]:
+        note["room"] = rec["room"]
+        with lock:
+            targets = [n for n in rooms.get(rec["room"], ()) if n != conn.user]
+    else:
+        targets = [rec["to"]]
+    for n in targets:
+        push("room" if rec["room"] else "pm", n, note)
+    return ok(conn, req, fid=rec["fid"], name=rec["name"], size=rec["size"])
+
+
+def handle_file_get(conn, req):
+    with lock:
+        rec = files.get(req.get("fid"))
+    if rec is None:
+        return err(conn, req, "NO_SUCH_FILE", "unknown or expired file")
+    if not can_read(conn.user, rec):
+        return err(conn, req, "NOT_ALLOWED", "you are not in this conversation")
+    data = rec["data"]
+    chunks = [data[i:i + FILE_CHUNK] for i in range(0, len(data), FILE_CHUNK)]
+    ok(conn, req, fid=rec["fid"], name=rec["name"], size=rec["size"], chunks=len(chunks))
+    for i, c in enumerate(chunks):
+        conn.send({"type": "FILE_CHUNK", "fid": rec["fid"], "seq": i,
+                   "data": base64.b64encode(c).decode(), "last": i == len(chunks) - 1})
+
+
 def handle_bulk(conn, req):
-    if req.get("type") != "BULK":
+    t = req.get("type")
+    if t == "FILE_UP":
+        return handle_file_up(conn, req)
+    if t == "FILE_CHUNK":
+        return handle_file_chunk(conn, req)
+    if t == "FILE_GET":
+        return handle_file_get(conn, req)
+    if t != "BULK":
         return err(conn, req, "BAD_REQUEST", "unknown type")
     size = req.get("size")
     if not (isinstance(size, int) and not isinstance(size, bool)
@@ -314,7 +473,11 @@ def listen(host, port):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="0.0.0.0")
+    ap.add_argument("--db", help="JSON file where accounts are kept between restarts (off by default)")
     args = ap.parse_args()
+    if args.db:
+        DB_PATH = args.db
+        load_users()
     threading.Thread(target=spam_watch, daemon=True).start()
     for p in (CONTROL, ROOM, PM, BULK):
         threading.Thread(target=listen, args=(args.host, p), daemon=True).start()

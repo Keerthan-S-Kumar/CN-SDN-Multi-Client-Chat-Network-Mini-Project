@@ -20,6 +20,8 @@ Latest results, run on the project VM:
 
 The two runs overlap (the chat tests run in both), so the numbers are not added together.
 
+File sharing is covered by the same suites: `tests/test_chat_server.py` (upload to a room and a private chat, access checks, bad sizes, out-of-order chunks, salted passwords, account persistence) and `tests/test_web_gateway.py` (browser upload and download, outsider refused, 5 MB limit). `eval/file_transfer.py` measures throughput on the real network.
+
 ## 2. Live check of the controller
 
 `controller/verify_live.sh` runs against a live Mininet. It posts events to the controller and checks the OpenFlow rules that appear and disappear on every switch: the static gate (3 drop rules and 1 control rule), allow rules after register, the VIP rule for a VIP room, throttle rules after a flag, 4 block rules after a block event, and removal of all of them afterwards.
