@@ -51,4 +51,7 @@ reproduce: test test-chat
 	sudo env PYTHONPATH=. python3 eval/run_experiments.py --only scale5,scale10,scale25,scale50,scale100 --runs 1
 	$(MAKE) report
 
-.PHONY: reproduce web-chat test-net test-chat controller topo server mock flows meters queues metrics experiments report test
+file-test:
+	PYTHONPATH=. python3 eval/file_transfer.py --server 10.0.0.1 --mb 3
+
+.PHONY: file-test reproduce web-chat test-net test-chat controller topo server mock flows meters queues metrics experiments report test

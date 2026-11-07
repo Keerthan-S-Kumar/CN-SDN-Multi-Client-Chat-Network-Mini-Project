@@ -38,9 +38,11 @@ Course: Computer Networks (UE25CS243A), SDN and socket programming mini project.
 
 **Chat application** (`chat/`)
 - Threaded TCP server on four ports, one per traffic class: 5000 control, 5001 room chat, 5002 private
-  messages, 5003 bulk.
-- Registration and login with hashed passwords, rooms (created on first join), private messages, and
-  user and room listings.
+  messages, 5003 bulk and file transfer.
+- Registration and login (salted PBKDF2 password hashes, optional `--db` file so accounts survive a restart),
+  rooms (created on first join), private messages, and user and room listings.
+- File sharing in rooms and private chats (up to 5 MB, chunked over port 5003, so the network treats it as
+  bulk traffic): `/sendroom`, `/sendpm`, `/get` in the terminal client, drag and drop in the browser.
 - Messages are a 4-byte length followed by JSON, so message boundaries survive TCP's byte stream.
 - Spam detection (about 20 messages in 5 seconds flags a user) and brute-force detection (5 bad logins).
 - Command-line client, load-generating bots, and a browser client (`make web-chat`).
@@ -54,11 +56,14 @@ Course: Computer Networks (UE25CS243A), SDN and socket programming mini project.
 - Rules are removed when the user disconnects, using strict deletes so the default rules are never touched.
 - Also implemented for deliverable 2: VIP queue, spam throttling with meters, brute-force block,
   congestion response, link-failure rerouting on a triangle of switches, and a baseline mode.
-- REST API: `/event`, `/health`, `/state`, `/metrics`, `/policy`.
+- REST API: `/event`, `/health`, `/state`, `/metrics`, `/policy`, plus the dashboard's `/snapshot`, `/traffic`
+  (bytes per host and class), `/explain` (why each host is limited), `/results` and `/ui/action`.
 
 **Dashboard and web chat** (see [`docs/ui.md`](docs/ui.md))
-- A live dashboard served by the controller at `http://<controller>:8080/ui`: network map coloured by policy,
-  server-link load, hosts and rooms, and a plain-English event feed.
+- A live dashboard served by the controller at `http://<controller>:8080/ui` with five tabs: Live (map coloured
+  by policy, link load, traffic by class, event feed), Policies (every rule, who is limited and why, unflag,
+  unblock, VIP and ban controls), Traffic (bytes per host and class, queues and meters), Results (SDN vs baseline)
+  and Deliverables (the project requirements with live proof).
 - A browser chat client whose "Your network path" card shows what the controller is doing to your host.
 
 ## Architecture
@@ -187,7 +192,7 @@ Useful targets: `make flows`, `make meters`, `make queues`, `make metrics`, `mak
 ## Tests
 
 ```bash
-make test         # 20 controller tests (real OpenFlow messages, fake switches); needs Ryu importable
+make test         # 23 controller tests (real OpenFlow messages, fake switches); needs Ryu importable
 make test-chat    # chat server and web gateway tests (real sockets, fake controller)
 sudo mn -c        # then, with a controller running:
 sudo env PYTHONPATH=. python3 -m unittest tests.test_topology -v     # single topology
@@ -203,7 +208,7 @@ disappear on every switch.
 | Member | Contributions |
 |---|---|
 | **Janhvi** | Chat application: threaded TCP server (registration, login, rooms, private messages, bulk port), command-line client, load-generating bots, spam and brute-force detection, result analysis and plotting scripts, and the 43-test chat server suite. Part A documentation (`docs/part-a.md`). |
-| **Keerthan** | SDN controller: the Ryu application (flow rules, two-table pipeline, routing, policy, congestion monitor, REST API), its 22 unit tests and live verification script, the live dashboard and the browser chat client, the frozen interface contract, and repository administration (branching, reviews, CODEOWNERS). |
+| **Keerthan** | SDN controller: the Ryu application (flow rules, two-table pipeline, routing, policy, congestion monitor, REST API), its 23 unit tests and live verification script, the live dashboard and the browser chat client, the frozen interface contract, and repository administration (branching, reviews, CODEOWNERS). |
 | **Harsha** | Network and evaluation: Mininet topologies (single switch and triangle), the root-namespace link to the controller, Open vSwitch QoS queues, topology and triangle tests, the architecture document, and the D2 experiment runner (`eval/run_experiments.py`), result graphs, `docs/results.md`, `docs/testing.md` and `docs/demo-d2.md`. |
 
 Ownership rules and the per-deliverable split are in [`docs/ownership.md`](docs/ownership.md).
@@ -234,6 +239,7 @@ docs/        architecture, interface contract, controller notes, evaluation plan
 | [`docs/results.md`](docs/results.md) | D2 results: SDN vs static baseline, tables, graphs, discussion |
 | [`docs/testing.md`](docs/testing.md) | Test cases and how to run them |
 | [`docs/demo-d2.md`](docs/demo-d2.md) | Step-by-step script for the live D2 demonstration |
+| [`docs/viva.md`](docs/viva.md) | Questions and honest answers for the viva |
 | [`docs/ownership.md`](docs/ownership.md) | Who owns which files and the task split |
 
 ## Troubleshooting

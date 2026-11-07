@@ -59,6 +59,8 @@ MAX_BAD_LOGINS = 5
 # ---- protocol --------------------------------------------------------------
 MAX_FRAME = 64 * 1024
 MAX_BULK = 60000
+MAX_FILE = 5 * 1024 * 1024        # largest shareable file
+FILE_CHUNK = 32 * 1024            # raw bytes per FILE_CHUNK frame (base64 keeps it under MAX_FRAME)
 
 # ---- eval ------------------------------------------------------------------
 RESULTS_DIR = "eval/results"

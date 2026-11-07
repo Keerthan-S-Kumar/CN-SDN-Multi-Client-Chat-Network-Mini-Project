@@ -18,3 +18,7 @@ and the passing test output. Deliverable 2: dashboard under congestion and link 
 web gateway were real; the controller was replaced by a small data stub so every state (congestion, a throttled host,
 a re-route) could be shown at once. They are previews of the layout, not measurements. Live screenshots from the
 Mininet VM replace them before the final demo.
+
+`web-chat-v2-file-sharing.png` shows a file shared in a room (real chat server and gateway, a 1.3 MB file uploaded in the
+browser and downloaded by a second user, byte for byte). The throttled banner and the network panel numbers come from
+the same data stub as above.

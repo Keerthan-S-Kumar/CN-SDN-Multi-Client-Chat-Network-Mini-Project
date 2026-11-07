@@ -63,6 +63,13 @@ T3:
 
 Expect 4 rules at priority 400 (ports 5000 to 5003). Say: "This is what the server sends after repeated bad logins; the block lifts by itself after 60 seconds."
 
+## E. File sharing under load (1.5 min)
+With the iperf stream from C still running (or start it again), at `mininet>`:
+
+    h2 PYTHONPATH=. python3 eval/file_transfer.py --server 10.0.0.1 --mb 3
+
+It prints the upload and download time of a 3 MB file and checks the bytes are identical. Say: "Files travel on port 5003, so the switch puts them in the bulk queue. They are slower than chat, but the chat latency in the last step did not move." Open the dashboard Traffic tab: the Bulk bar for h2 grows by about 3 MB. In the web chat, drag a file into a room, and the other user gets a Download card.
+
 ## Closing line
 "The controller adds no cost when idle and helps most when the network is under stress: congestion and link failure. Its limits are the flood scenario, where throttling at the switch does not help a loaded server, and the rules being per host."
 
