@@ -111,7 +111,7 @@ controller is unreachable because they were taken without the SDN network runnin
 
 ## Demo video
 
-Link: _to be added before deliverable 2_
+A recorded walkthrough of the steps in [`docs/demo-d2.md`](docs/demo-d2.md) will be linked here.
 
 ## Setup
 
@@ -232,14 +232,13 @@ docs/        architecture, interface contract, controller notes, evaluation plan
 |---|---|
 | [`docs/architecture.md`](docs/architecture.md) | Components, topologies, flow-table design, dynamic behaviour |
 | [`docs/interfaces.md`](docs/interfaces.md) | The frozen contract: ports, message formats, events, flow rows |
-| [`docs/controller.md`](docs/controller.md) | The controller: design decisions, flow table, test cases and rubric map |
+| [`docs/controller.md`](docs/controller.md) | The controller: design decisions, flow table and test cases |
 | [`docs/part-a.md`](docs/part-a.md) | Chat server, client, bots, spam detection, analysis scripts |
 | [`docs/ui.md`](docs/ui.md) | Live SDN dashboard and browser chat client |
 | [`docs/eval-plan.md`](docs/eval-plan.md) | Scenarios, metrics and result formats for deliverable 2 |
 | [`docs/results.md`](docs/results.md) | D2 results: SDN vs static baseline, tables, graphs, discussion |
 | [`docs/testing.md`](docs/testing.md) | Test cases and how to run them |
 | [`docs/demo-d2.md`](docs/demo-d2.md) | Step-by-step script for the live D2 demonstration |
-| [`docs/viva.md`](docs/viva.md) | Questions and honest answers for the viva |
 | [`docs/ownership.md`](docs/ownership.md) | Who owns which files and the task split |
 
 ## Troubleshooting

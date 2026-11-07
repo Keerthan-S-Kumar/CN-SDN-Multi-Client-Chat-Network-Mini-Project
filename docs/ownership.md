@@ -14,7 +14,7 @@ Everyone codes against `docs/interfaces.md` and tests alone with the mocks; inte
 
 Already written and frozen: `chat/protocol.py`, `chat/notifier.py`, `common/constants.py`, `tools/*`.
 
-## D1 — due 25 Oct (15 marks): single switch, static gating + one live event
+## D1: single switch, static gating and one live event
 
 **A:** `server.py` (threaded accept loops 5000–5003, users/tokens/rooms, REGISTER/LOGIN/JOIN/LEAVE/LIST, ATTACH+MSG_ROOM, ATTACH+MSG_PM, notify on register/login/join/leave/disconnect and wait on register/login), `client.py` CLI.
 *Done when:* 3 localhost clients register, join, chat, PM; `make mock` prints the events.
@@ -27,7 +27,7 @@ Already written and frozen: `chat/protocol.py`, `chat/notifier.py`, `common/cons
 
 **D1 demo (the test script):** pingall → unregistered client blocked on 5001 → register → flows appear → 3 clients chat + PM → `dump-flows` per-class counters.
 
-## D2 — (date TBC) (25 marks)
+## D2: triangle, queues, dynamic behaviour, evaluation
 
 **A:** `server.py` additions: port 5003 `BULK`, spam detection → `flag`/`unflag`, bad-login counting → `block`. `bot.py` (load generator, CSV per contract §11, optional spammer mode). `spam.py` (detector helper). `analyze.py`, `plot.py`.
 *Done when:* 100 bots run on localhost without errors; CSV matches the schema; a spammer bot triggers `flag` at the mock.
@@ -38,23 +38,7 @@ Already written and frozen: `chat/protocol.py`, `chat/notifier.py`, `common/cons
 **C:** `topo.py --topo triangle`, `qos.py` (OVS QoS + 4 queues on s1:1 — see §9), `run_experiments.py`, demo script for D2, final documentation/report assembly.
 *Done when:* `run_experiments.py --only idle` produces CSVs for both modes.
 
-### D2 score map
-| Rubric | Where |
-|---|---|
-| Complete functionality (4) | A: protocol, bulk, bots; all clients through D1 + D2 |
-| Dynamic SDN (6) | B: congestion→heavy meter, spam→throttle, block, VIP, reroute |
-| Challenging scenario (4) | `flood`, `linkfail`, unauthorized, brute-force demos |
-| Performance + baseline (5) | C runner + A analysis, `docs/eval-plan.md` |
-| Docs / demo / viva (6) | C assembles; **each person documents and can explain their own part** |
-
 ## Git workflow
 - `main` protected; PR + 1 review; squash-merge. Branches `a/…`, `b/…`, `c/…`. Small PRs, merge early.
 - Tag `d1` at the D1 submission commit; D2 continues on `main`.
 - Pull `main` before each session; no force-push.
-
-## D1 checkpoints (24–25 Oct)
-| Time | Check |
-|---|---|
-| 24 Oct 20:00 | A↔mock and B↔fake events each meet "Done when" |
-| 24 Oct 21:00 | Integration on one VM: topo + Ryu + server + 3 clients, demo.sh end to end |
-| 25 Oct morning | Demo 3×, backup video, docs final, tag `d1` |

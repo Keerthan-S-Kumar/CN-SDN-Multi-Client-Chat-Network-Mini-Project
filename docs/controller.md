@@ -94,21 +94,10 @@ Fill the last column when you run each case; keep the output as screenshots for 
 | T8 | Congestion response (triangle) | `iperf3 -u -b 12M` from h3 to h1 while bots chat | `/metrics.congested` true, prio-60 rule for 10.0.0.3, `congestion_on`/`heavy_on` in the event log; all clear after iperf stops | [ ] |
 | T9 | Link failure and recovery (triangle) | Mininet CLI: `link s1 s2 down`, ping h2 to h1, `link s1 s2 up` | `links_down` = `[[1,2]]`, ping recovers over s3, `reroute_done` with `ms` in the log; after `up` the direct path returns | [ ] |
 | T10 | Baseline behaves differently | restart with `make controller MODE=baseline`, repeat T2 and T9 | 5001 reachable without registering; no queue/meter rules; the failed link is not rerouted | [ ] |
-| T11 | Unit tests | `make test` | 20 controller tests pass | [ ] |
+| T11 | Unit tests | `make test` | 23 controller tests pass | [ ] |
 | T12 | Live rule check | `bash controller/verify_live.sh` | every line `PASS` | [ ] |
 
-## Rubric map (controller)
-
-| Rubric line | Where it is shown |
-|---|---|
-| Mininet + SDN implementation (D1, 4) | `app.py`, `flows.py`, `routing.py`; T1, T2, T11 |
-| Socket-SDN integration (D1, 3) | event to rule path in `handle_event`; T3, T4, T12 |
-| Initial testing and demo (D1, 2) | T1-T4 with screenshots |
-| Dynamic SDN functionality (D2, 6) | T5-T9 (prioritisation, filtering, monitoring, blocking, rerouting, recovery) |
-| Challenging scenario (D2, 4) | T2 (unauthorised access), T7, T8 (congestion), T9 (link failure) |
-| Performance and baseline (D2, 5) | T10 and `docs/eval-plan.md`; controller timings in `controller_events.jsonl` |
-
-## Known limits (say these before the examiner does)
+## Known limits
 
 - Policy is per host IP, not per user or room (see decision 4).
 - Routing is shortest path, not load-aware.

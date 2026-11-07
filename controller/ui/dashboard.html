@@ -597,24 +597,24 @@
     var sent = (tr.classes.room || 0) + (tr.classes.private || 0) + (tr.classes.bulk || 0);
     var res = resultsCache || [], cong = {}; res.forEach(function (r) { if (r.scenario === "congested") { cong[r.mode] = r; } });
     var items = [
-      ["Mininet topology and SDN controller", "D1 · 4", "Switches connected to the controller over OpenFlow 1.3, flow rules installed.", (snap.switches || []).length > 0, (snap.switches || []).length + " switches, " + snap.topology + " topology"],
-      ["Socket application (TCP chat)", "D1 · 4", "Chat server on ports 5000-5003 with registered users and rooms.", users > 0, users + " hosts registered, " + rooms + " rooms"],
-      ["Socket to SDN integration", "D1 · 3", "Chat events (register, join, flag, block) change switch rules within milliseconds.", (kinds.event_rx || 0) > 0 && m.last_flow_install_ms > 0, "last rule install " + ms(m.last_flow_install_ms) + ", " + (kinds.event_rx || 0) + " recent chat events"],
-      ["Complete application functionality", "D2 · 4", "Many clients, rooms, private messages and shared files under normal load.", sent > 0, bytes(sent) + " counted across " + Object.keys(tr.hosts || {}).length + " hosts"],
-      ["Dynamic SDN: filtering, prioritisation, blocking", "D2 · 6", "Gate drops unregistered hosts, VIP and bulk queues, spam throttle, block.", (rules.throttle || []).length + (rules.block || []).length + (rules.vip || []).length + (m.drop_hits || 0) > 0,
+      ["Mininet topology and SDN controller", "", "Switches connected to the controller over OpenFlow 1.3, flow rules installed.", (snap.switches || []).length > 0, (snap.switches || []).length + " switches, " + snap.topology + " topology"],
+      ["Socket application (TCP chat)", "", "Chat server on ports 5000-5003 with registered users and rooms.", users > 0, users + " hosts registered, " + rooms + " rooms"],
+      ["Socket to SDN integration", "", "Chat events (register, join, flag, block) change switch rules within milliseconds.", (kinds.event_rx || 0) > 0 && m.last_flow_install_ms > 0, "last rule install " + ms(m.last_flow_install_ms) + ", " + (kinds.event_rx || 0) + " recent chat events"],
+      ["Complete application functionality", "", "Many clients, rooms, private messages and shared files under normal load.", sent > 0, bytes(sent) + " counted across " + Object.keys(tr.hosts || {}).length + " hosts"],
+      ["Dynamic SDN: filtering, prioritisation, blocking", "", "Gate drops unregistered hosts, VIP and bulk queues, spam throttle, block.", (rules.throttle || []).length + (rules.block || []).length + (rules.vip || []).length + (m.drop_hits || 0) > 0,
         (m.drop_hits || 0) + " gate drops, " + (rules.vip || []).length + " VIP, " + (rules.throttle || []).length + " throttled, " + (rules.block || []).length + " blocked"],
-      ["Dynamic SDN: rerouting and recovery", "D2 · 6", "Link failure on the triangle is detected and traffic moves to the other path.", snap.topology === "triangle" && (m.last_reroute_ms > 0 || (m.links_down || []).length > 0),
+      ["Dynamic SDN: rerouting and recovery", "", "Link failure on the triangle is detected and traffic moves to the other path.", snap.topology === "triangle" && (m.last_reroute_ms > 0 || (m.links_down || []).length > 0),
         snap.topology === "triangle" ? ((m.links_down || []).length ? "link down, rerouting active" : "last re-route " + ms(m.last_reroute_ms)) : "needs the triangle topology"],
-      ["Challenging scenario: congestion", "D2 · 4", "Over 80% load marks the link congested and meters the heaviest sender.", !!m.congested || (m.heavy || []).length > 0 || (kinds.congestion_on || 0) > 0,
+      ["Challenging scenario: congestion", "", "Over 80% load marks the link congested and meters the heaviest sender.", !!m.congested || (m.heavy || []).length > 0 || (kinds.congestion_on || 0) > 0,
         m.congested ? "congested now, metering " + (m.heavy || []).join(", ") : ((kinds.congestion_on || 0) ? "congestion seen in the recent log" : "not triggered yet: run the iperf step")],
-      ["Challenging scenario: unauthorised access", "D2 · 4", "Five failed logins block the host; unregistered hosts are dropped at the gate.", (m.blocked || []).length > 0 || (m.drop_hits || 0) > 0,
+      ["Challenging scenario: unauthorised access", "", "Five failed logins block the host; unregistered hosts are dropped at the gate.", (m.blocked || []).length > 0 || (m.drop_hits || 0) > 0,
         (m.blocked || []).length ? (m.blocked.join(", ") + " blocked") : (m.drop_hits || 0) + " packets dropped at the gate"],
-      ["Performance evaluation against a baseline", "D2 · 5", "Latency, loss, scale and recovery measured for SDN and a static baseline.", res.length > 0,
+      ["Performance evaluation against a baseline", "", "Latency, loss, scale and recovery measured for SDN and a static baseline.", res.length > 0,
         res.length ? (res.length + " result rows" + (cong.sdn && cong.baseline ? "; congestion p50 " + cong.sdn.p50_ms_mean.toFixed(1) + " ms (SDN) vs " + cong.baseline.p50_ms_mean.toFixed(0) + " ms (baseline)" : "")) : "open the Results tab to load them"],
-      ["Documentation and reproducible demo", "D2 · 6", "README, architecture, results, testing and demo docs; make reproduce.", true, "see README and docs/ in the repository"]
+      ["Documentation and reproducible demo", "", "README, architecture, results, testing and demo docs; make reproduce.", true, "see README and docs/ in the repository"]
     ];
     $("reqs").innerHTML = items.map(function (it) {
-      return '<div class="req ' + (it[3] ? "ok" : "idle") + '"><span class="st"></span><div><b>' + esc(it[0]) + '</b><span class="marks">' + it[1] + "</span><p>" + esc(it[2]) + '</p></div><div class="proof">' + esc(it[4]) + "</div></div>";
+      return '<div class="req ' + (it[3] ? "ok" : "idle") + '"><span class="st"></span><div><b>' + esc(it[0]) + '</b>' + (it[1] ? '<span class="marks">' + it[1] + "</span>" : "") + "<p>" + esc(it[2]) + '</p></div><div class="proof">' + esc(it[4]) + "</div></div>";
     }).join("");
   }
 
