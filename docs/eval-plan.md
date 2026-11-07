@@ -1,4 +1,4 @@
-# Evaluation plan (D2: Performance 5 marks + Robustness 4 marks)
+# Evaluation plan
 
 **Comparison:** `baseline` (static shortest-path switching, no gating/queues/meters/reaction) vs `sdn` (full controller),
 on the **same triangle topology and same QoS queues**. Only the controller mode changes.
