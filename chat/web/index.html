@@ -4,23 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chat network</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%233cd7f4%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%274%27 fill=%27%2304202a%27/%3E%3C/svg%3E">
 <style>
   :root {
-    --ground:#eef2f5; --panel:#ffffff; --ink:#12263a; --muted:#566879; --rule:#d9e1e8;
-    --rail:#0f2236; --rail-ink:#e6eef6; --rail-muted:#8ea3b8; --rail-hover:#1b3550; --rail-on:#26496b;
-    --accent:#0b7a78; --accent-ink:#ffffff; --accent-soft:#dff1f0;
-    --pm:#4a3fd0; --pm-soft:#e7e5fa; --warn:#a85f00; --warn-soft:#faecd5; --bad:#b32f2f; --bad-soft:#f7dfdf; --ok:#1d8548;
-    --mine:#0b7a78; --focus:#1b6fd1; --shadow:0 1px 2px rgba(15,34,54,.08);
+    color-scheme: dark;
+    --ground:#080d1c; --panel:#111a33; --ink:#e9eefc; --muted:#8fa0c8; --rule:#243459;
+    --rail:#0a1022; --rail-ink:#e9eefc; --rail-muted:#8fa0c8; --rail-hover:#16213f; --rail-on:#1f3160;
+    --accent:#3cd7f4; --accent-ink:#04202a; --accent-soft:rgba(60,215,244,.13);
+    --pm:#a58bfa; --pm-soft:rgba(165,139,250,.15); --warn:#fbbf24; --warn-soft:rgba(251,191,36,.13);
+    --bad:#fb5a6e; --bad-soft:rgba(251,90,110,.14); --ok:#2dd4a7;
+    --mine:#3cd7f4; --focus:#7dd3fc; --shadow:none;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --ground:#0b1622; --panel:#12233a; --ink:#e6eef6; --muted:#9fb2c4; --rule:#25384f;
-      --rail:#08121c; --rail-ink:#e6eef6; --rail-muted:#8ea3b8; --rail-hover:#14263a; --rail-on:#1f3d5c;
-      --accent:#46c2bf; --accent-ink:#06222a; --accent-soft:#12383b;
-      --pm:#a9a2ff; --pm-soft:#25255a; --warn:#f0a63c; --warn-soft:#41300f; --bad:#ff8585; --bad-soft:#471d22; --ok:#5fd08a;
-      --mine:#46c2bf; --focus:#6fb0ff; --shadow:none;
-    }
-  }
+  body { background:radial-gradient(900px 480px at 10% -10%, #14224a 0%, transparent 60%), var(--ground) !important; }
   * { box-sizing:border-box; }
   html, body { height:100%; }
   body { margin:0; background:var(--ground); color:var(--ink); font:15px/1.45 "Avenir Next","Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
@@ -33,7 +28,7 @@
 
   /* ---------- sign in ---------- */
   #login { min-height:100%; display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); }
-  .brand { background:var(--rail); color:var(--rail-ink); padding:56px 56px 40px; display:flex; flex-direction:column; justify-content:space-between; gap:32px; }
+  .brand { background:linear-gradient(160deg,#101a3a,#0a1022 70%); color:var(--rail-ink); padding:56px 56px 40px; display:flex; flex-direction:column; justify-content:space-between; gap:32px; }
   .brand h1 { font-size:2.6rem; line-height:1.05; margin:0 0 14px; letter-spacing:-.03em; max-width:12ch; }
   .brand p { color:var(--rail-muted); max-width:38ch; margin:0; font-size:1.05rem; }
   .brand svg { width:100%; max-width:520px; height:auto; }
@@ -45,7 +40,7 @@
   #lform label { display:block; margin:14px 0 5px; font-weight:600; font-size:.92rem; }
   .actions { display:flex; gap:10px; margin-top:22px; }
   .btn { border:1px solid var(--rule); background:var(--panel); border-radius:10px; padding:10px 16px; font-weight:600; }
-  .btn.primary { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+  .btn.primary { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); box-shadow:0 0 18px rgba(60,215,244,.25); }
   .actions .btn { flex:1; }
   .err { color:var(--bad); font-weight:600; min-height:1.4em; margin:10px 0 0; }
 
@@ -86,6 +81,8 @@
   #menu { display:none; border:1px solid var(--rule); background:var(--panel); border-radius:8px; padding:6px 10px; }
   .pill { font-size:.8rem; font-weight:650; padding:2px 10px; border-radius:999px; }
   .pill.room { background:var(--accent-soft); color:var(--accent); }
+  .netchip { background:var(--accent-soft); color:var(--accent); white-space:nowrap; }
+  .netchip.warn { background:var(--warn-soft); color:var(--warn); } .netchip.bad { background:var(--bad-soft); color:var(--bad); }
   .pill.pm { background:var(--pm-soft); color:var(--pm); }
 
   .alert { margin:12px 20px 0; padding:10px 14px; border-radius:10px; font-weight:600; background:var(--warn-soft); color:var(--warn); }
@@ -105,7 +102,8 @@
   .msg .head time { color:var(--muted); font-size:.8rem; }
   .msg .body { white-space:pre-wrap; overflow-wrap:anywhere; max-width:72ch; }
   .msg.mine .head b { color:var(--accent); }
-  .msg.pm .body { background:var(--pm-soft); padding:6px 10px; border-radius:4px 12px 12px 12px; display:inline-block; }
+  .msg.pm .body { background:var(--pm-soft); padding:6px 10px; border-radius:4px 12px 12px 12px; display:inline-block; border:1px solid rgba(165,139,250,.3); }
+  .msg:not(.pm) .body { color:#dfe7fb; }
   .sys { text-align:center; color:var(--muted); font-size:.88rem; margin:10px 0; }
   .bad-line { text-align:center; color:var(--bad); font-weight:600; font-size:.9rem; margin:10px 0; }
   .blank { max-width:36ch; margin:12vh auto 0; text-align:center; color:var(--muted); }
@@ -130,7 +128,11 @@
   .people button { width:100%; display:flex; align-items:center; gap:10px; padding:6px 4px; border:0; background:transparent; border-radius:8px; text-align:left; }
   .people button:hover { background:var(--accent-soft); }
   .people .dot { border-color:var(--panel); }
-  .net { border:1px solid var(--rule); border-radius:12px; padding:14px; }
+  .net { border:1px solid var(--rule); border-radius:12px; padding:14px; background:linear-gradient(180deg,#131d3a,#0f1730); }
+  .spark { width:100%; height:46px; display:block; margin:6px 0 2px; }
+  .why { margin:8px 0 0; padding:8px 10px; border-radius:9px; background:var(--warn-soft); color:var(--warn); font-size:.85rem; }
+  .why.bad { background:var(--bad-soft); color:var(--bad); }
+  #toast { position:fixed; right:18px; bottom:18px; background:#16213f; border:1px solid var(--rule); border-radius:10px; padding:9px 14px; font-size:.9rem; max-width:340px; z-index:6; }
   .net svg { width:100%; height:auto; display:block; margin-bottom:8px; }
   .net .row { display:flex; justify-content:space-between; gap:10px; padding:4px 0; border-top:1px solid var(--rule); font-size:.9rem; }
   .net .row:first-of-type { border-top:0; }
@@ -168,9 +170,9 @@
       <g fill="none" stroke="#8ea3b8" stroke-width="2"><path d="M70 100 H220"/><path d="M300 100 H450"/><path d="M260 36 V70" stroke-dasharray="4 4"/></g>
       <g font-size="13" fill="#e6eef6" text-anchor="middle">
         <rect x="20" y="78" width="100" height="44" rx="10" fill="#1b3550"/><text x="70" y="105">Your browser</text>
-        <rect x="210" y="70" width="100" height="60" rx="12" fill="#0b7a78"/><text x="260" y="105">Switch</text>
+        <rect x="210" y="70" width="100" height="60" rx="12" fill="#0e8fa8"/><text x="260" y="105">Switch</text>
         <rect x="400" y="78" width="100" height="44" rx="10" fill="#1b3550"/><text x="450" y="105">Chat server</text>
-        <rect x="205" y="6" width="110" height="34" rx="9" fill="#4a3fd0"/><text x="260" y="28">Controller</text>
+        <rect x="205" y="6" width="110" height="34" rx="9" fill="#6d52e0"/><text x="260" y="28">Controller</text>
       </g>
     </svg>
     <p class="legend">Your sign-in is checked by the chat server. Your connection is allowed, queued or limited by the switch.</p>
@@ -208,6 +210,7 @@
     <header class="bar">
       <button id="menu" type="button" aria-label="Open rooms and people">Menu</button>
       <div class="t"><h1><span id="tt">Choose a room or a person</span> <span class="pill room" id="tpill" hidden></span></h1><small id="ts"></small></div>
+      <span class="pill netchip" id="netchip" hidden></span>
     </header>
     <div class="alert" id="netAlert" role="status" hidden></div>
     <div class="thread-wrap"><div id="thread" aria-live="polite"></div><button id="jump" type="button" hidden>New messages</button></div>
@@ -233,7 +236,7 @@
 (function () {
   "use strict";
   var sid = null, me = null, cur = null, convs = {}, unread = {}, rooms = [], people = [], allRooms = [], dmExtra = [], es = null, timers = [];
-  var COLORS = ["#0b7a78", "#4a3fd0", "#a85f00", "#b32f2f", "#86389f", "#1d8548", "#1b6fd1", "#7a5b00"];
+  var COLORS = ["#0e8fa8", "#6d52e0", "#c27a0a", "#d0364a", "#9d46c0", "#12906f", "#2f6fe0", "#a06a00"];
   var EMOJI = ["😀", "👍", "🎉", "😂", "❤️", "🚀", "🤔", "🙏"];
   function $(i) { return document.getElementById(i); }
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } if (text !== undefined) { e.textContent = text; } return e; }
@@ -384,13 +387,28 @@
     var name = cur.slice(3);
     $("ts").textContent = people.indexOf(name) >= 0 ? "Online. Only you two can read this" : "Offline. Messages cannot be delivered right now";
   }
+  var bpsHist = [], lastSig = null;
+  function fmtBps(v) { return v < 1000 ? Math.round(v) + " bit/s" : v < 1e6 ? (v / 1000).toFixed(1) + " kbit/s" : (v / 1e6).toFixed(2) + " Mbit/s"; }
+  function fmtBytes(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(2) + " MB"; }
+  function spark() {
+    var NS = "http://www.w3.org/2000/svg", svg = document.createElementNS(NS, "svg"), mx = Math.max.apply(null, bpsHist.concat([1000]));
+    svg.setAttribute("viewBox", "0 0 260 46"); svg.setAttribute("class", "spark"); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "Your recent traffic");
+    var pts = bpsHist.map(function (v, i) { return (i / 39 * 260).toFixed(1) + "," + (42 - v / mx * 36).toFixed(1); });
+    if (pts.length > 1) { var pl = document.createElementNS(NS, "polyline"); pl.setAttribute("points", pts.join(" ")); pl.setAttribute("fill", "none"); pl.setAttribute("stroke", "var(--accent)"); pl.setAttribute("stroke-width", "2"); svg.appendChild(pl); }
+    return svg;
+  }
+  var toastT = null;
+  function toast(t) { var e = $("toast"); if (!e) { e = el("div"); e.id = "toast"; e.setAttribute("role", "status"); document.body.appendChild(e); } e.textContent = t; e.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { e.hidden = true; }, 4000); }
   function chip(text, cls) { return el("span", "chip " + (cls || ""), text); }
   function drawNet(n) {
-    var box = $("net"), alert = $("netAlert"); box.textContent = ""; alert.hidden = true;
+    var box = $("net"), alert = $("netAlert"), nc = $("netchip"); box.textContent = ""; alert.hidden = true; nc.hidden = true;
     if (!n || !n.ok || !n.available) {
       box.appendChild(el("p", "note", "The controller is not reachable from here, so the network details are hidden. Chat still works."));
       return;
     }
+    nc.hidden = false;
+    nc.className = "pill netchip" + (n.blocked ? " bad" : (n.throttled || n.heavy) ? " warn" : "");
+    nc.textContent = n.mode === "baseline" ? "Baseline network" : n.blocked ? "Blocked" : n.throttled ? "Throttled" : n.heavy ? "Rate limited" : n.vip ? "VIP path" : n.allowed ? "Allowed" : "Not registered";
     var path = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     path.setAttribute("viewBox", "0 0 260 64");
     var hot = n.blocked ? "var(--bad)" : (n.throttled || n.heavy) ? "var(--warn)" : "var(--accent)";
@@ -414,6 +432,14 @@
     }
     r2.appendChild(c); box.appendChild(r2);
     var r3 = el("div", "row"); r3.appendChild(el("span", "", "Server link")); r3.appendChild(el("span", "", Math.round((n.util || 0) * 100) + "%" + (n.congested ? ", congested" : ""))); box.appendChild(r3);
+    var r4 = el("div", "row"); r4.appendChild(el("span", "", "You are sending")); r4.appendChild(el("span", "", fmtBps(n.bps || 0))); box.appendChild(r4);
+    if (n.bytes) { var r5 = el("div", "row"); r5.appendChild(el("span", "", "Sent so far")); r5.appendChild(el("span", "", fmtBytes(n.bytes))); box.appendChild(r5); }
+    bpsHist.push(n.bps || 0); if (bpsHist.length > 40) { bpsHist.shift(); }
+    box.appendChild(spark());
+    var sig = [n.blocked, n.throttled, n.heavy, n.allowed].join();
+    if (lastSig !== null && sig !== lastSig) { toast(n.blocked ? "The network blocked your host" : n.throttled ? "The network is throttling your host" : n.heavy ? "The network is rate limiting your host" : "Your host's policy changed"); }
+    lastSig = sig;
+    (n.reasons || []).forEach(function (r) { var w = el("div", "why" + (r.category === "block" ? " bad" : ""), r.reason + (r.expires_in_s ? ". Clears in about " + Math.round(r.expires_in_s) + " s." : "")); box.appendChild(w); });
     var how = n.blocked ? "The network is dropping everything from this host for a while (too many failed sign-ins)."
       : n.throttled ? "Too many messages too fast. The network moved this host to the slow bulk queue."
       : n.vip ? "Room chat travels in the fast queue because this host is on the VIP list."

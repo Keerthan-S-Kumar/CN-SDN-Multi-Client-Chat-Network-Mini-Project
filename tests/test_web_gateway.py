@@ -120,3 +120,40 @@ def test_network_card_without_and_with_controller(base):
         assert n["available"] and n["allowed"] and n["vip"] and not n["blocked"] and n["util"] == 0.4
     finally:
         web_gateway.CONTROLLER = old
+
+
+def test_healthz(base):
+    h = json.load(urllib.request.urlopen(base + "/healthz"))
+    assert h["ok"] is True
+
+
+def test_network_card_with_traffic_and_reason(base):
+    s = post(base, "login", mode="register", user="net_t", password="pw")["sid"]
+    old = web_gateway.CONTROLLER
+    pages = {"/snapshot": {"rules": {"allow": ["127.0.0.1"], "throttle": ["127.0.0.1"]}},
+             "/metrics": {"mode": "sdn", "util": 0.9, "congested": True},
+             "/traffic": {"hosts": {"127.0.0.1": {"total": 5000, "bps": 800.0, "bytes": {"room": 5000}}}},
+             "/explain": {"actions": [{"ip": "127.0.0.1", "category": "throttle", "reason": "spam: too fast"}]}}
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            body = json.dumps(pages[self.path]).encode()
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    fake = ThreadingHTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=fake.serve_forever, daemon=True).start()
+    try:
+        web_gateway.CONTROLLER = "http://127.0.0.1:%d" % fake.server_address[1]
+        n = post(base, "net", sid=s)
+        assert n["throttled"] and n["bytes"] == 5000 and n["bps"] == 800.0
+        assert n["reasons"][0]["reason"] == "spam: too fast"
+    finally:
+        fake.shutdown()
+        web_gateway.CONTROLLER = old

@@ -24,7 +24,9 @@ from ryu.ofproto import ofproto_v1_3
 
 from common.constants import (
     BLOCK_SECONDS, BOTTLENECK_BPS, BOTTLENECK_DPID, BOTTLENECK_PORT, CLIENT_IPS, CONTROLLER_LOG, EVENTS,
-    HOST_MAC, MODE, MONITOR_INTERVAL, PRIO_DROP, TABLE_POLICY, TRIANGLE_LINKS)
+    HEAVY_KBPS, HOST_MAC, MODE, MONITOR_INTERVAL, PORT_BULK, PORT_CONTROL, PORT_PM, PORT_ROOM,
+    PRIO_ALLOW, PRIO_BLOCK, PRIO_DROP, PRIO_HEAVY, PRIO_THROTTLE, PRIO_VIP, TABLE_POLICY, THROTTLE_KBPS,
+    TRIANGLE_LINKS)
 from controller import flows
 from controller.monitor import Congestion, bps, heavy_hosts
 from controller.policy import Policy
@@ -59,6 +61,10 @@ class ChatSdn(app_manager.RyuApp):
         self.flagged = defaultdict(set)            # ip -> flagged users
         self.blocked = {}                          # ip -> expiry (unix time)
         self.heavy = set()
+        self.reasons = {}                          # (category, ip) -> {"reason", "since", "user"} for the dashboard
+        self.tx_total = defaultdict(int)           # (ip, tcp port) -> bytes sent by that host (summed from flow stats)
+        self.tx_seen = {}                          # (ip, tcp port) -> last flow-stat byte sum, to detect counter resets
+        self.tx_hist = defaultdict(list)           # ip -> [(t, total bytes)] for a short rate window
         self.installed = {c: set() for c in flows.CATEGORIES}
         # monitoring
         self.cong = Congestion()
@@ -113,6 +119,64 @@ class ChatSdn(app_manager.RyuApp):
                 "hosts": {mac: list(loc) for mac, loc in self.hosts.items()},
                 "bottleneck_bps": BOTTLENECK_BPS,
                 "links": [sorted((a, b)) for a, _, b, _ in TRIANGLE_LINKS]}
+
+    CLASS_OF_PORT = {PORT_CONTROL: "control", PORT_ROOM: "room", PORT_PM: "private", PORT_BULK: "bulk"}
+
+    def traffic(self):
+        """Bytes each client host has sent per traffic class (read from the switch's own flow counters), plus
+        a recent rate. Counted at the host's first switch, so a packet is never counted twice."""
+        hosts, classes = {}, {c: 0 for c in self.CLASS_OF_PORT.values()}
+        for (ip, port), n in self.tx_total.items():
+            cls = self.CLASS_OF_PORT.get(port)
+            if cls is None:
+                continue
+            h = hosts.setdefault(ip, {"user": self.last_user(ip), "bytes": {c: 0 for c in classes},
+                                      "total": 0, "bps": 0.0})
+            h["bytes"][cls] += n
+            h["total"] += n
+            classes[cls] += n
+        for ip, h in hosts.items():
+            hist = self.tx_hist.get(ip, [])
+            if len(hist) >= 2:
+                (t0, b0), (t1, b1) = hist[0], hist[-1]
+                h["bps"] = round(max(0, b1 - b0) * 8 / max(t1 - t0, 1e-6), 1)
+        return {"hosts": hosts, "classes": classes, "bottleneck_bps": BOTTLENECK_BPS, "util": round(self.util, 4)}
+
+    def explain(self):
+        """Every active policy action, with the reason it exists and when it started (for the Policies tab)."""
+        now, acts = time.time(), []
+        for (cat, ip), info in sorted(self.reasons.items()):
+            if ip not in self.installed.get(cat, ()):
+                continue
+            a = {"category": cat, "ip": ip, "user": info.get("user") or self.last_user(ip),
+                 "reason": info["reason"], "since": info["since"], "age_s": round(now - info["since"], 1)}
+            if cat == "block" and ip in self.blocked:
+                a["expires_in_s"] = max(0, round(self.blocked[ip] - now, 1))
+            acts.append(a)
+        for ip in sorted(self.installed.get("vip", ())):
+            if ("vip", ip) not in self.reasons:
+                acts.append({"category": "vip", "ip": ip, "user": self.last_user(ip),
+                             "reason": "VIP user or room in the policy file", "since": None, "age_s": None})
+        rules = [
+            {"cat": "gate", "prio": PRIO_DROP, "match": "tcp 5001-5003 from any host", "action": "drop",
+             "when": "host has not registered", "count": None},
+            {"cat": "allow", "prio": PRIO_ALLOW, "match": "tcp 5001-5003 from a registered host",
+             "action": "classify into room / private / bulk queue", "when": "REGISTER or LOGIN event",
+             "count": len(self.installed["allow"])},
+            {"cat": "vip", "prio": PRIO_VIP, "match": "tcp 5001 from a VIP host", "action": "high-priority queue",
+             "when": "user or room listed as VIP in policy", "count": len(self.installed["vip"])},
+            {"cat": "throttle", "prio": PRIO_THROTTLE, "match": "tcp 5000-5003 from a flagged host",
+             "action": "bulk queue + %d kbit/s meter" % THROTTLE_KBPS,
+             "when": "server flags spam (20 msgs in 5 s)", "count": len(self.installed["throttle"])},
+            {"cat": "block", "prio": PRIO_BLOCK, "match": "tcp 5000-5003 from a blocked host", "action": "drop",
+             "when": "5 bad logins, or a banned user logs in", "count": len(self.installed["block"])},
+            {"cat": "heavy", "prio": PRIO_HEAVY, "match": "all IP from a heavy host",
+             "action": "%d kbit/s meter" % HEAVY_KBPS,
+             "when": "link congested and host sends over 30% of it", "count": len(self.installed["heavy"])},
+        ]
+        return {"actions": acts, "rules": rules, "policy": self.policy.to_dict(),
+                "thresholds": {"spam": "20 msgs / 5 s", "quiet_unflag_s": 30, "bad_logins": 5,
+                               "block_s": BLOCK_SECONDS, "congest_on": 0.8, "congest_off": 0.5}}
 
     def last_user(self, ip):
         return sorted(self.sessions[ip])[-1] if self.sessions.get(ip) else None
@@ -286,7 +350,7 @@ class ChatSdn(app_manager.RyuApp):
             self.sessions[ip].add(user)
             self.user_ip[user] = ip
             if self.policy.is_banned(user):
-                self.block_ip(ip)
+                self.block_ip(ip, "banned user in the policy file", user)
         elif ev == "disconnect":
             self.sessions[ip].discard(user)
             if not self.sessions[ip]:
@@ -301,22 +365,50 @@ class ChatSdn(app_manager.RyuApp):
             self.rooms[room].discard(user)
         elif ev == "flag":
             self.flagged[ip].add(user)
+            self.reasons[("throttle", ip)] = {"reason": "spam: more than 20 messages in 5 s", "since": time.time(),
+                                              "user": user}
         elif ev == "unflag":
             self.flagged[ip].discard(user)
         elif ev == "block":
-            self.block_ip(ip)
+            self.block_ip(ip, "brute force: 5 failed logins", user)
         if self.reconcile():
             self.barrier(t0, ev)
         return 200, {"ok": True}
 
-    def block_ip(self, ip):
+    def admin(self, d):
+        """Dashboard buttons: unflag / unblock / block one host, or add a VIP or banned user to the policy."""
+        act, ip, user = d.get("action"), str(d.get("ip", "")), str(d.get("user", ""))
+        if act == "unflag" and ip:
+            self.flagged[ip].clear()
+            self.reasons.pop(("throttle", ip), None)
+        elif act == "unblock" and ip:
+            self.blocked.pop(ip, None)
+            self.reasons.pop(("block", ip), None)
+        elif act == "block" and ip:
+            self.block_ip(ip, "blocked by an administrator")
+        elif act in ("vip", "ban") and user:
+            key = "vip_users" if act == "vip" else "banned_users"
+            cur = self.policy.to_dict()
+            if user not in cur[key]:
+                cur[key].append(user)
+            self.set_policy(cur)
+            return 200, {"ok": True}
+        else:
+            return 400, {"ok": False, "error": "unknown action or missing ip/user"}
+        self.log("admin_action", action=act, ip=ip)
+        if self.reconcile():
+            self.barrier(time.time(), "admin")
+        return 200, {"ok": True}
+
+    def block_ip(self, ip, reason="blocked", user=None):
         self.blocked[ip] = time.time() + BLOCK_SECONDS
+        self.reasons[("block", ip)] = {"reason": reason, "since": time.time(), "user": user}
 
     def set_policy(self, d):
         self.policy.update(d)
         for ip, users in list(self.sessions.items()):
             if any(self.policy.is_banned(u) for u in users):
-                self.block_ip(ip)
+                self.block_ip(ip, "banned user in the policy file")
         if self.reconcile():
             self.barrier(time.time(), "policy")
 
@@ -396,6 +488,9 @@ class ChatSdn(app_manager.RyuApp):
             self.log("congestion_off", util=self.util)
             self.heavy.clear()
         if self.cong.active:
+            for ip in heavy_hosts(self._host_rates(), BOTTLENECK_BPS) - self.heavy:
+                self.reasons[("heavy", ip)] = {"reason": "congestion: sends over 30% of the bottleneck",
+                                               "since": now, "user": self.last_user(ip)}
             self.heavy |= heavy_hosts(self._host_rates(), BOTTLENECK_BPS)
         if (verdict or self.cong.active) and self.reconcile():
             self.barrier(now, "congestion")
@@ -411,5 +506,33 @@ class ChatSdn(app_manager.RyuApp):
 
     @set_ev_cls(ofp_event.EventOFPFlowStatsReply, MAIN_DISPATCHER)
     def on_flow_stats(self, ev):
+        self._count_traffic(ev.msg.datapath.id, ev.msg.body)
         self.drop_hits_by_dp[ev.msg.datapath.id] = sum(
             s.packet_count for s in ev.msg.body if s.priority == PRIO_DROP and s.table_id == TABLE_POLICY)
+
+    def _count_traffic(self, dpid, body):
+        """Add up per-host, per-port bytes from rules of every category, only on the switch the host plugs into."""
+        sums = defaultdict(int)
+        for s in body:
+            if s.table_id != TABLE_POLICY or s.priority < PRIO_ALLOW:
+                continue
+            m = dict(s.match.items()) if hasattr(s.match, "items") else {}
+            ip, port = m.get("ipv4_src"), m.get("tcp_dst")
+            if ip and port in self.CLASS_OF_PORT:
+                sums[(ip, port)] += s.byte_count
+        now = time.time()
+        touched = set()
+        for (ip, port), n in sums.items():
+            mac = next((m for m, i in MAC_TO_IP.items() if i == ip), None)
+            loc = self.hosts.get(mac)
+            if loc is None or loc[0] != dpid:
+                continue
+            prev = self.tx_seen.get((ip, port))
+            self.tx_total[(ip, port)] += n if prev is None or n < prev else n - prev
+            self.tx_seen[(ip, port)] = n
+            touched.add(ip)
+        for ip in touched:
+            tot = sum(v for (i, _), v in self.tx_total.items() if i == ip)
+            h = self.tx_hist[ip]
+            h.append((now, tot))
+            del h[:-6]

@@ -147,7 +147,18 @@ def network_view(ip):
     except Exception:
         return {"available": False, "ip": ip}
     rules = snap.get("rules", {})
-    return {"available": True, "ip": ip, "mode": met.get("mode"),
+    extra = {}
+    try:                                    # newer controllers also say how much this host sent and why it is limited
+        mine = fetch_json("/traffic").get("hosts", {}).get(ip)
+        if mine:
+            extra.update(bytes=mine.get("total", 0), bps=mine.get("bps", 0), by_class=mine.get("bytes", {}))
+        acts = [a for a in fetch_json("/explain").get("actions", []) if a.get("ip") == ip and a.get("category") != "vip"]
+        if acts:
+            extra["reasons"] = [{"category": a["category"], "reason": a["reason"], "expires_in_s": a.get("expires_in_s")}
+                                for a in acts]
+    except Exception:
+        pass
+    return {**extra, "available": True, "ip": ip, "mode": met.get("mode"),
             "allowed": ip in rules.get("allow", []), "vip": ip in rules.get("vip", []),
             "throttled": ip in rules.get("throttle", []), "heavy": ip in rules.get("heavy", []),
             "blocked": ip in rules.get("block", []), "util": met.get("util", 0),
@@ -204,6 +215,8 @@ def make_handler(server_ip):
                 self.send_header("Cache-Control", "no-store")
                 self.end_headers()
                 self.wfile.write(body)
+            elif u.path == "/healthz":
+                self._json({"ok": True, "sessions": len(SESSIONS), "server": server_ip})
             elif u.path == "/api/info":
                 self._json({"server": server_ip, "ports": [PORT_CONTROL, PORT_ROOM, PORT_PM]})
             elif u.path == "/api/events":
