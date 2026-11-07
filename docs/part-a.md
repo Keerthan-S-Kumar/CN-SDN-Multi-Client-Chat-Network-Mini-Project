@@ -84,4 +84,4 @@ Scripted tests of register, join, room message and the duplicate-login error; th
 
 ## 11. Known limitations
 
-State is in memory, so users are lost on restart. Passwords are stored as plain SHA-256 without a salt, and tokens never expire. The server is one process with one thread per connection, which is fine for 100 bots but would not scale to thousands.
+State is in memory, so users are lost on restart unless the server is started with `--db accounts.json` (accounts only; rooms, messages and shared files are never saved). Passwords are stored as salted PBKDF2-SHA256 hashes. Tokens never expire, shared files are kept in memory only (at most 50 files and 64 MB), and there is no encryption on the wire. The server is one process with one thread per connection, which is fine for 100 bots but would not scale to thousands.

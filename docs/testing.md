@@ -11,14 +11,15 @@ Four layers: unit tests, a live check of the controller, scenario runs on the tr
 | Controller logic | `controller/test_logic.py` | gating, queues, throttling, rerouting and the monitor, against the controller's own functions |
 | Topology | `tests/test_topology.py`, `tests/test_triangle.py` | host addresses, port numbers, links, switch IDs and the QoS queues (need root and Mininet) |
 
-Latest results, run on the project VM:
+Latest results (the chat, gateway and dashboard tests also run on every push through GitHub Actions):
 
 | Command | Result |
 |---|---|
-| `python3 -m pytest tests -q` (system Python) | 49 passed, 17 skipped (the skipped tests need Ryu) |
-| `$HOME/ryu-env/bin/python3 -m pytest tests controller/test_logic.py -q --ignore=tests/test_topology.py --ignore=tests/test_triangle.py` (Ryu environment) | 71 passed |
+| `python3 -m pytest tests/test_chat_server.py tests/test_web_gateway.py tests/test_ui_api.py -q` (no Ryu or Mininet needed) | 59 passed, 2 skipped |
+| `python3 -m unittest controller.test_logic` (Ryu environment) | 23 passed |
+| `sudo env PYTHONPATH=. python3 -m unittest tests.test_topology tests.test_triangle` (root, Mininet) | run on the project VM |
 
-The two runs overlap (the chat tests run in both), so the numbers are not added together.
+The earlier VM run before file sharing and the dashboard changes was 71 passed in the Ryu environment; rerun it after pulling.
 
 File sharing is covered by the same suites: `tests/test_chat_server.py` (upload to a room and a private chat, access checks, bad sizes, out-of-order chunks, salted passwords, account persistence) and `tests/test_web_gateway.py` (browser upload and download, outsider refused, 5 MB limit). `eval/file_transfer.py` measures throughput on the real network.
 
