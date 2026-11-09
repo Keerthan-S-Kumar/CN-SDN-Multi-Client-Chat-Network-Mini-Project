@@ -271,6 +271,8 @@ def test_register_missing_password_is_bad_request():
 
 def test_login_success_and_login_event(controller, make_user):
     u = make_user(attach=False)
+    u.ctl.close()  # one session per account: end the first before signing in again
+    time.sleep(0.3)
     s = connect(CTL)
     r = call(s, "LOGIN", user=u.name, password="pw")
     s.close()
@@ -291,6 +293,22 @@ def test_login_unknown_user():
     r = call(s, "LOGIN", user=uname(), password="pw")
     s.close()
     assert r["type"] == "ERR" and r["code"] in ("BAD_CREDENTIALS", "NO_SUCH_USER")
+
+
+def test_second_login_is_refused_and_first_session_survives(make_user):
+    room = "r" + uuid.uuid4().hex[:8]
+    a, b = make_user(), make_user()
+    a.join(room)
+    b.join(room)
+    s = connect(CTL)
+    r = call(s, "LOGIN", user=a.name, password="pw")
+    s.close()  # the refused attempt goes away, like closing an incognito tab
+    assert r["type"] == "ERR" and r["code"] == "ALREADY_ONLINE"
+    time.sleep(0.3)
+    assert call(a.ctl, "LIST", what="rooms")["type"] == "OK", "first session was logged out"
+    b.say(room, "still there?")
+    m = recv_push(a.room)
+    assert m and m["type"] == "MSG" and m["text"] == "still there?", "first session lost its room"
 
 
 def test_commands_require_login():
@@ -621,6 +639,8 @@ def test_spam_user_is_flagged_to_controller(controller, make_user):
 
 def test_repeated_bad_logins_trigger_block_event(controller, make_user):
     u = make_user(attach=False)
+    u.ctl.close()  # one session per account: end the first before signing in again
+    time.sleep(0.3)
     ok = connect(CTL)
     assert call(ok, "LOGIN", user=u.name, password="pw")["type"] == "OK"  # resets the IP's counter
     ok.close()

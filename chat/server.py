@@ -157,8 +157,12 @@ def handle_control(conn, req):
                     save_users()
                 token = secrets.token_hex(8)
                 tokens[token] = user
-                online[user] = conn
-                conn.user = user
+                if online.get(user) not in (None, conn):
+                    tokens.pop(token, None)      # this sign-in is refused: drop its unused token
+                    code = "ALREADY_ONLINE"      # the first session stays untouched
+                else:
+                    online[user] = conn
+                    conn.user = user
         if code == "BAD_CREDENTIALS":
             with lock:
                 bad_logins[conn.ip] = bad_logins.get(conn.ip, 0) + 1
