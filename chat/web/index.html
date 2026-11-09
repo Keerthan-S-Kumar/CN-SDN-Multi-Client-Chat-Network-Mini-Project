@@ -8,8 +8,8 @@
 <style>
   :root {
     color-scheme: dark;
-    --ground:#080d1c; --panel:#111a33; --ink:#e9eefc; --muted:#8fa0c8; --rule:#243459;
-    --rail:#0a1022; --rail-ink:#e9eefc; --rail-muted:#8fa0c8; --rail-hover:#16213f; --rail-on:#1f3160;
+    --ground:#080d1c; --panel:#111a33; --ink:#e9eefc; --muted:#aebbdc; --rule:#243459;
+    --rail:#0a1022; --rail-ink:#e9eefc; --rail-muted:#aebbdc; --rail-hover:#16213f; --rail-on:#1f3160;
     --accent:#3cd7f4; --accent-ink:#04202a; --accent-soft:rgba(60,215,244,.13);
     --pm:#a58bfa; --pm-soft:rgba(165,139,250,.15); --warn:#fbbf24; --warn-soft:rgba(251,191,36,.13);
     --bad:#fb5a6e; --bad-soft:rgba(251,90,110,.14); --ok:#2dd4a7;
@@ -42,6 +42,9 @@
   .btn { border:1px solid var(--rule); background:var(--panel); border-radius:10px; padding:10px 16px; font-weight:600; }
   .btn.primary { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); box-shadow:0 0 18px rgba(60,215,244,.25); }
   .actions .btn { flex:1; }
+  .fhint { color:var(--muted); font-size:.82rem; margin:6px 0 0; }
+  .showpw { display:flex !important; align-items:center; gap:8px; font-weight:400 !important; margin:10px 0 0 !important; color:var(--muted); cursor:pointer; }
+  .showpw input { width:auto; }
   .err { color:var(--bad); font-weight:600; min-height:1.4em; margin:10px 0 0; }
 
   /* ---------- app shell ---------- */
@@ -102,7 +105,7 @@
   .msg .head time { color:var(--muted); font-size:.8rem; }
   .msg .body { white-space:pre-wrap; overflow-wrap:anywhere; max-width:72ch; }
   .msg.mine .head b { color:var(--accent); }
-  .msg.pm .body { background:var(--pm-soft); padding:6px 10px; border-radius:4px 12px 12px 12px; display:inline-block; border:1px solid rgba(165,139,250,.3); }
+  .msg.pm .body { border-left:3px solid var(--pm); padding-left:10px; }
   .msg:not(.pm) .body { color:#dfe7fb; }
   .filecard { display:inline-flex; align-items:center; gap:12px; padding:9px 12px; border:1px solid var(--rule); border-radius:12px; background:linear-gradient(180deg,#14203f,#101a36); max-width:100%; }
   .filecard .ico { width:36px; height:36px; border-radius:9px; background:var(--accent-soft); color:var(--accent); display:grid; place-items:center; flex:none; font-weight:700; font-size:.72rem; }
@@ -192,8 +195,10 @@
     <form id="lform">
       <h2>Welcome</h2>
       <p class="sub">Use your existing account, or create one.</p>
-      <label for="u">Name</label><input id="u" autocomplete="username" required maxlength="32">
-      <label for="p">Password</label><input id="p" type="password" autocomplete="current-password" required>
+      <label for="u">Name</label><input id="u" autocomplete="username" required maxlength="16" pattern="[A-Za-z0-9_]{1,16}" placeholder="e.g. alice" title="Letters, numbers and underscore, up to 16 characters">
+      <p class="fhint">Letters, numbers and underscore, up to 16 characters.</p>
+      <label for="p">Password</label><input id="p" type="password" autocomplete="current-password" required placeholder="Your password">
+      <label class="showpw"><input type="checkbox" id="showpw"> Show password</label>
       <div class="actions"><button class="btn primary" type="submit" data-mode="login">Sign in</button><button class="btn" type="submit" data-mode="register">Create account</button></div>
       <p class="err" id="lerr" role="alert"></p>
     </form>
@@ -207,7 +212,7 @@
       <h2>Rooms</h2>
       <ul class="nav" id="rooms"></ul>
       <p class="empty" id="noRooms">You are not in any room yet.</p>
-      <form class="joinbox" id="jform"><label class="sr" for="jr">Room name</label><input id="jr" placeholder="Room name" required maxlength="32"><button type="submit">Join</button></form>
+      <form class="joinbox" id="jform"><label class="sr" for="jr">Room name</label><input id="jr" placeholder="New or existing room" required maxlength="16" pattern="[A-Za-z0-9_]{1,16}" title="Letters, numbers and underscore, up to 16 characters"><button type="submit">Join</button></form>
       <h2 id="browseH" hidden>Other rooms</h2>
       <ul class="nav" id="browse"></ul>
       <h2>Direct messages</h2>
@@ -235,7 +240,7 @@
   </main>
 
   <aside class="info" aria-label="Online people and network">
-    <h2>Online now</h2>
+    <h2>Online on the server</h2>
     <ul class="people" id="online"></ul>
     <h2>Your network path</h2>
     <div class="net" id="net"><p class="note">Checking the network...</p></div>
@@ -302,7 +307,7 @@
       var b = el("div", "blank");
       b.innerHTML = '<svg viewBox="0 0 84 60" aria-hidden="true"><rect x="2" y="4" width="56" height="34" rx="10" fill="var(--accent-soft)"/><rect x="26" y="22" width="56" height="34" rx="10" fill="var(--pm-soft)"/></svg>';
       b.appendChild(el("h3", "", "Start a conversation"));
-      b.appendChild(el("p", "", "Join a room on the left, or pick someone who is online to send a private message."));
+      b.appendChild(el("p", "", "Join a room on the left, or click a name under Online on the server to send a private message."));
       t.appendChild(b); return;
     }
     if (!list.length) {
@@ -392,7 +397,7 @@
     if (!people.length) { var li = el("li", "note", "Nobody else is online."); on.appendChild(li); }
     people.forEach(function (n) {
       var li = el("li"), b = el("button"); b.type = "button"; b.appendChild(avatar(n, false, true)); b.appendChild(el("span", "", n));
-      b.onclick = function () { openConv("pm:" + n); }; li.appendChild(b); on.appendChild(li);
+      b.title = "Send " + n + " a private message"; b.onclick = function () { openConv("pm:" + n); }; li.appendChild(b); on.appendChild(li);
     });
     document.title = (Object.keys(unread).reduce(function (s, k) { return s + (unread[k] || 0); }, 0) ? "(" + Object.keys(unread).reduce(function (s, k) { return s + (unread[k] || 0); }, 0) + ") " : "") + "Chat network";
   }
@@ -404,12 +409,13 @@
     $("tt").textContent = room ? "# " + name : name;
     var pill = $("tpill"); pill.hidden = false; pill.className = "pill " + (room ? "room" : "pm"); pill.textContent = room ? "Room" : "Private";
     $("ts").textContent = room ? "Everyone in this room sees your messages" : (people.indexOf(name) >= 0 ? "Online. Only you two can read this" : "Offline. Messages cannot be delivered right now");
-    $("msg").disabled = false; $("sbtn").disabled = false; $("clip").disabled = false; $("msg").focus();
+    $("msg").disabled = false; fit(); $("clip").disabled = false; $("msg").focus();
     drawNav(); drawThread(true);
   }
 
   function joinRoom(name) {
     name = name.trim(); if (!name) { return; }
+    if (!/^[A-Za-z0-9_]{1,16}$/.test(name)) { toast("Room names use letters, numbers and underscore, up to 16 characters."); return; }
     api("join", {room: name}).then(function (r) {
       if (!r.ok) { add(cur || "room:", {kind: "bad", text: say(r)}); return; }
       if (rooms.indexOf(name) < 0) { rooms.push(name); }
@@ -525,6 +531,7 @@
         connect(); drawNav(); drawThread(true); refresh(); timers.push(setInterval(refresh, 4000));
       }).catch(function () { $("lerr").textContent = WORDS.SERVER_UNREACHABLE; });
   });
+  $("showpw").addEventListener("change", function () { $("p").type = $("showpw").checked ? "text" : "password"; });
   $("jform").addEventListener("submit", function (e) { e.preventDefault(); joinRoom($("jr").value); });
 
   function send() {
@@ -538,7 +545,7 @@
     });
     box.value = ""; fit();
   }
-  function fit() { var b = $("msg"); b.style.height = "auto"; b.style.height = Math.min(b.scrollHeight, 150) + "px"; }
+  function fit() { var b = $("msg"); b.style.height = "auto"; b.style.height = Math.min(b.scrollHeight, 150) + "px"; $("sbtn").disabled = b.disabled || !b.value.trim(); }
   $("send").addEventListener("submit", function (e) { e.preventDefault(); send(); });
   $("msg").addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } });
   $("msg").addEventListener("input", fit);
