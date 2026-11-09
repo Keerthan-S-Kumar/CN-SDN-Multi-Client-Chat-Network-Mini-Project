@@ -43,6 +43,7 @@ Reply: `{"id":n,"type":"OK",...}` or `{"id":n,"type":"ERR","code":"<CODE>","msg"
 
 **Port 5000:** `REGISTER{user,password}`→`token` (also logs in) · `LOGIN{user,password}`→`token` ·
 `JOIN{room}`→`members` · `LEAVE{room}` · `LIST{what:"rooms"|"users"}`→`items`.
+One active session per account: a `LOGIN` with the correct password for an account that is already online is refused with `ALREADY_ONLINE`, and the first session is not affected.
 
 **Ports 5001/5002:** first frame `{"id":1,"type":"ATTACH","token":T}`. Then
 5001 `MSG_ROOM{room,text}` → push to members `{"type":"MSG","kind":"room","room","from","text","ts"}`;
@@ -59,7 +60,7 @@ frame (size ≤ 60000). Used to generate low-priority class traffic.
 - New error codes: `NO_SUCH_FILE`, `NOT_ALLOWED`. File names are reduced to a plain name (no path, safe characters, 80 chars).
 - The bytes travel on port 5003, so the existing rules already classify them as bulk traffic (Q_BULK).
 
-Error codes: `BAD_REQUEST USER_EXISTS BAD_CREDENTIALS NOT_LOGGED_IN NO_SUCH_ROOM NOT_IN_ROOM NO_SUCH_USER OFFLINE BAD_TOKEN NO_SUCH_FILE NOT_ALLOWED`.
+Error codes: `BAD_REQUEST USER_EXISTS BAD_CREDENTIALS NOT_LOGGED_IN NO_SUCH_ROOM NOT_IN_ROOM NO_SUCH_USER OFFLINE BAD_TOKEN NO_SUCH_FILE NOT_ALLOWED ALREADY_ONLINE`.
 Names `[A-Za-z0-9_]{1,16}`; rooms created on first JOIN; `ts` = unix seconds (float).
 
 ## 4. Server → controller events (`chat/notifier.py`)
