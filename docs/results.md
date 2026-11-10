@@ -7,7 +7,7 @@ All numbers come from `eval/results/summary.csv` (made by `make report` from the
 - **Topology:** the three-switch triangle (s1, s2, s3), 100 Mbps links, a 10 Mbps bottleneck on the port to the chat server (h1) with four HTB queues.
 - **Modes:** `sdn` is the full controller (gating, queues, heavy-hitter meter, throttling, rerouting). `baseline` is the same controller code with only static shortest-path forwarding. Same topology and same queues; only `CONTROLLER_MODE` differs.
 - **Load:** 10 bots spread over h2, h3 and h4, 2 messages per second each, 30 seconds per run, one shared room. Scale runs use 5 to 100 bots; at 50 and 100 bots the rate is lowered to 1 and 0.5 messages per second per bot so the VM can keep up.
-- **Runs:** 3 per mode for idle, congested, flood, linkfail, scale50 and scale100; 1 per mode for scale5, scale10 and scale25.
+- **Runs:** 3 per mode for every scenario.
 - **Metric:** message latency = time received minus time sent, in milliseconds (p50, p95, p99). Loss is the share of expected deliveries that never arrived.
 - **Runner:** `eval/run_experiments.py` (restarts the controller, builds the topology, runs the bots, collects the CSV and the controller log for every run).
 
@@ -24,13 +24,13 @@ All numbers come from `eval/results/summary.csv` (made by `make report` from the
 | linkfail | sdn | 4.25 | 35.0 | 68.1 | 0.0 |
 | linkfail | baseline | 2.47 | 11355.0 | 13155.6 | 0.0 |
 
-Scalability (3 runs at 50 and 100 bots, 1 run at the smaller sizes; mean of the runs):
+Scalability (3 runs per mode at every size; mean of the runs):
 
 | Bots | Runs | sdn: p50 / p95 (ms), loss % | baseline: p50 / p95 (ms), loss % |
 |---|---|---|---|
-| 5 | 1 | 1.56 / 2.76, 0.0 | 1.50 / 2.85, 0.0 |
-| 10 | 1 | 2.00 / 13.4, 0.0 | 1.97 / 4.59, 0.0 |
-| 25 | 1 | 3.51 / 11.1, 0.0 | 3.66 / 20.7, 0.0 |
+| 5 | 3 | 1.75 / 10.0, 0.0 | 1.72 / 6.86, 0.0 |
+| 10 | 3 | 2.32 / 8.06, 0.0 | 2.35 / 11.2, 0.0 |
+| 25 | 3 | 3.73 / 18.4, 0.0 | 4.11 / 20.6, 0.0 |
 | 50 | 3 | 11.3 / 54.9, 0.0 | 21.2 / 938.6, 0.25 |
 | 100 | 3 | 4757 / 12169, 33.8 | 3024 / 7002, 14.3 |
 
@@ -93,7 +93,7 @@ Controller reaction times for the `sdn` runs, from the controller and runner eve
 
 - All measurements are on a virtual machine, so absolute numbers depend on its CPU and timing; the comparison between modes is the useful result.
 - Rules are per host IP, so a flag throttles every user on that host. The flood scenario therefore puts the spammer alone on h4.
-- Scale runs for 5, 10 and 25 bots have one run per mode, so there is no spread estimate for them; at 100 bots the runs differ so much that the average is not reliable.
+- Three runs per mode is a small sample; at 100 bots the runs differ so much that the average is not reliable.
 
 ## Reproduce
 

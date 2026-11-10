@@ -58,6 +58,6 @@ The first three steps are in `docs/demo-d1.md`; the block rules are also checked
 
 ## Known gaps
 
-- At 100 bots both modes are overloaded and the runs vary widely, so no conclusion is drawn there; scale 5, 10 and 25 have one run per mode.
+- At 100 bots both modes are overloaded and the runs vary widely, so no conclusion is drawn there.
 - The flood scenario shows no latency gain from throttling; see `docs/results.md`.
 - Rules are per host IP, so one flagged user throttles every user on the same host.
