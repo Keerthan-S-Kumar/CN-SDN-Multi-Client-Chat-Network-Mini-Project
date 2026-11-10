@@ -2,8 +2,8 @@
 
 Setup, same order as D1 (cleanup, then Ryu, then topology):
 - T3: `sudo -v`, then `sudo mn -c`
-- T1: `cd ~/CN-SDN-Multi-Client-Chat-Network-Mini-Project && source ~/ryu-env/bin/activate`, then
-  `PYTHONPATH=. CONTROLLER_MODE=sdn ryu-manager controller/app.py`
+- T1: `cd ~/CN-SDN-Multi-Client-Chat-Network-Mini-Project`, then
+  `PYTHONPATH=. CONTROLLER_MODE=sdn ~/ryu-env/bin/ryu-manager controller/app.py`
 - T2 (run `sudo -v` first): `cd ~/CN-SDN-Multi-Client-Chat-Network-Mini-Project`, then
   `sudo env PYTHONPATH=. python3 topology/topo.py --topo triangle --cli`
   The `sch_htb ... quantum is big` lines are harmless.
