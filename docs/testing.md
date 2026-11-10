@@ -28,6 +28,8 @@ File sharing is covered by the same suites: `tests/test_chat_server.py` (upload 
 
 `controller/verify_live.sh` runs against a live Mininet. It posts events to the controller and checks the OpenFlow rules that appear and disappear on every switch: the static gate (3 drop rules and 1 control rule), allow rules after register, the VIP rule for a VIP room, throttle rules after a flag, 4 block rules after a block event, and removal of all of them afterwards.
 
+`tests/demo_auto.py` (run it with `make demo-check`; needs root and Mininet) starts the controller and the triangle itself and checks the demo scenarios in about 2 minutes: no loss on pingall, the gate blocks an unregistered host, the route moves to the detour when s2-s3 goes down, chat latency and queues under a 12 Mbps flood, the block rules, and a 1 MB file transfer. Latest run: 13 of 13 checks passed.
+
 ## 3. Scenario runs
 
 `eval/run_experiments.py` runs each scenario against both modes (`sdn`, `baseline`) and writes `eval/results/<mode>/<scenario>/run<k>.csv`. The scenarios and the numbers are in `docs/results.md`.
