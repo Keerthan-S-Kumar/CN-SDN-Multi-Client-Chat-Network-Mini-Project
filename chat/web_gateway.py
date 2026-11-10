@@ -342,9 +342,10 @@ def make_handler(server_ip):
                     return self._json({"ok": True})
                 if path == "/api/list":
                     what = d.get("what")
-                    if what not in ("rooms", "users"):
+                    if what not in ("rooms", "users", "members"):
                         raise GatewayError("BAD_REQUEST", "what must be rooms or users")
-                    return self._json({"ok": True, "items": s.control("LIST", what=what).get("items", [])})
+                    extra = {"room": str(d.get("room", ""))} if what == "members" else {}
+                    return self._json({"ok": True, "items": s.control("LIST", what=what, **extra).get("items", [])})
                 if path == "/api/msg":
                     s.send(s.room_sock, "MSG_ROOM", room=str(d.get("room", "")), text=str(d.get("text", "")))
                     return self._json({"ok": True})

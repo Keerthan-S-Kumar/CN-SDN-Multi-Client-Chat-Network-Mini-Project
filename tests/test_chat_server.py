@@ -383,6 +383,23 @@ def test_list_rooms_and_users(make_user):
     assert users["type"] == "OK" and {a.name, b.name} <= set(users["items"])
 
 
+def test_list_members_of_a_room(make_user):
+    room = "r" + uuid.uuid4().hex[:8]
+    a, b = make_user(), make_user()
+    a.join(room)
+    b.join(room)
+    r = call(a.ctl, "LIST", what="members", room=room)
+    assert r["type"] == "OK" and r["items"] == sorted([a.name, b.name])
+    assert call(b.ctl, "LEAVE", room=room)["type"] == "OK"
+    assert call(a.ctl, "LIST", what="members", room=room)["items"] == [a.name]
+
+
+def test_list_members_of_unknown_room(make_user):
+    a = make_user()
+    r = call(a.ctl, "LIST", what="members", room="ghost" + uuid.uuid4().hex[:6])
+    assert r["type"] == "ERR" and r["code"] == "NO_SUCH_ROOM"
+
+
 def test_list_bad_argument(make_user):
     a = make_user()
     r = call(a.ctl, "LIST", what="widgets")
