@@ -54,4 +54,6 @@ reproduce: test test-chat
 file-test:
 	PYTHONPATH=. python3 eval/file_transfer.py --server 10.0.0.1 --mb 3
 
-.PHONY: file-test reproduce web-chat test-net test-chat controller topo server mock flows meters queues metrics experiments report test
+.PHONY: demo-check file-test reproduce web-chat test-net test-chat controller topo server mock flows meters queues metrics experiments report test
+demo-check:
+	sudo env PYTHONPATH=. python3 tests/demo_auto.py
