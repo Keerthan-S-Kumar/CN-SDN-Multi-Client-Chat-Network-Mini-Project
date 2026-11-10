@@ -10,6 +10,7 @@ Four layers: unit tests, a live check of the controller, scenario runs on the tr
 | Web gateway and UI API | `tests/test_web_gateway.py`, `tests/test_ui_api.py` | the browser chat gateway and the controller's dashboard API |
 | Controller logic | `controller/test_logic.py` | gating, queues, throttling, rerouting and the monitor, against the controller's own functions |
 | Topology | `tests/test_topology.py`, `tests/test_triangle.py` | host addresses, port numbers, links, switch IDs and the QoS queues (need root and Mininet) |
+| Evaluation code | `tests/test_eval.py` | the experiment plan, run merging, the statistics in `analyze.py`, failover and congestion reaction times, and the demo-check parsers (no Mininet needed) |
 
 Latest results (the chat, gateway and dashboard tests also run on every push through GitHub Actions):
 
