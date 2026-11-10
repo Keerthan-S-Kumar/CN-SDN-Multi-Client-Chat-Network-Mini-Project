@@ -48,7 +48,7 @@ File sharing is covered by the same suites: `tests/test_chat_server.py` (upload 
 | Disconnect closes the gate | the user disconnects | the allow rules are removed and the drop rules remain |
 | Brute force | repeated bad logins from one host | the server sends a `block` event and the controller installs 4 drop rules (ports 5000 to 5003) |
 
-The first three steps are in `docs/demo-d1.md`; the block rules are also checked by `controller/verify_live.sh`.
+The block rules are also checked by `controller/verify_live.sh`.
 
 ## Run everything
 

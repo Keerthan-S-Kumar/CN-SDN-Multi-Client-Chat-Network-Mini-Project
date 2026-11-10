@@ -69,5 +69,6 @@ Per run at 50 and 100 bots (p50 / p95 in ms, loss %):
 Run these from the repo root:
 
     sudo env PYTHONPATH=. python3 eval/run_experiments.py --core --runs 3
-    sudo env PYTHONPATH=. python3 eval/run_experiments.py --only scale5,scale10,scale25,scale50,scale100 --runs 1
+    sudo env PYTHONPATH=. python3 eval/run_experiments.py --only scale5,scale10,scale25 --runs 1
+    sudo env PYTHONPATH=. python3 eval/run_experiments.py --only scale50,scale100 --runs 3
     make report
