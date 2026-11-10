@@ -240,6 +240,7 @@
   </main>
 
   <aside class="info" aria-label="Online people and network">
+    <div id="inroomBox" hidden><h2 id="inroomH">In this room</h2><ul class="people" id="inroom"></ul></div>
     <h2>Online on the server</h2>
     <ul class="people" id="online"></ul>
     <h2>Your network path</h2>
@@ -404,6 +405,32 @@
   }
   function closeRail() { $("rail").classList.remove("open"); }
 
+  /* ---------- who is in the current room ---------- */
+  var roomMembers = [];
+  function drawMembers() {
+    var box = $("inroomBox"), ul = $("inroom"), inRoom = !!cur && cur.indexOf("room:") === 0;
+    box.hidden = !inRoom;
+    if (!inRoom) { return; }
+    $("inroomH").textContent = "In this room (" + roomMembers.length + ")";
+    ul.textContent = "";
+    roomMembers.forEach(function (n) {
+      var li = el("li"), b = el("button"); b.type = "button";
+      b.appendChild(avatar(n, false, n === me || people.indexOf(n) >= 0));
+      b.appendChild(el("span", "", n === me ? n + " (you)" : n));
+      if (n !== me) { b.title = "Send " + n + " a private message"; b.onclick = function () { openConv("pm:" + n); }; }
+      li.appendChild(b); ul.appendChild(li);
+    });
+  }
+  function loadMembers() {
+    if (!sid || reconnecting || !cur || cur.indexOf("room:") !== 0) { drawMembers(); return; }
+    var key = cur;
+    api("list", {what: "members", room: key.slice(5)}).then(function (r) {
+      if (cur !== key) { return; }
+      if (r.ok) { roomMembers = r.items; }
+      drawMembers();
+    });
+  }
+
   function openConv(key) {
     cur = key; unread[key] = 0;
     var room = key.indexOf("room:") === 0, name = key.slice(key.indexOf(":") + 1);
@@ -411,7 +438,7 @@
     var pill = $("tpill"); pill.hidden = false; pill.className = "pill " + (room ? "room" : "pm"); pill.textContent = room ? "Room" : "Private";
     $("ts").textContent = room ? "Everyone in this room sees your messages" : (people.indexOf(name) >= 0 ? "Online. Only you two can read this" : "Offline. Messages cannot be delivered right now");
     $("msg").disabled = false; fit(); $("clip").disabled = false; $("msg").focus();
-    drawNav(); drawThread(true);
+    drawNav(); drawThread(true); loadMembers();
   }
 
   function joinRoom(name) {
@@ -439,6 +466,7 @@
     });
     api("list", {what: "rooms"}).then(function (r) { if (r.ok) { allRooms = r.items.slice().sort(); drawNav(); } });
     api("net").then(drawNet);
+    loadMembers();
   }
   function openConvKeep() {
     var name = cur.slice(3);

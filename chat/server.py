@@ -236,6 +236,14 @@ def handle_control(conn, req):
 
     if t == "LIST":
         what = req.get("what")
+        if what == "members":                      # who is in one room
+            room = req.get("room")
+            with lock:
+                found = rooms.get(room) if isinstance(room, str) else None
+                names = sorted(found) if found is not None else None
+            if names is None:
+                return err(conn, req, "NO_SUCH_ROOM")
+            return ok(conn, req, items=names)
         with lock:
             items = (sorted(rooms) if what == "rooms"
                      else sorted(online) if what == "users" else None)

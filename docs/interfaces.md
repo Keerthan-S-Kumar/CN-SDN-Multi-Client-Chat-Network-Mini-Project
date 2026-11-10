@@ -42,7 +42,7 @@ Frame = 4-byte big-endian length + UTF-8 JSON object, max 64 KiB. Requests carry
 Reply: `{"id":n,"type":"OK",...}` or `{"id":n,"type":"ERR","code":"<CODE>","msg":"..."}`. Pushes have no id: `{"type":"MSG",...}`.
 
 **Port 5000:** `REGISTER{user,password}`→`token` (also logs in) · `LOGIN{user,password}`→`token` ·
-`JOIN{room}`→`members`,`history` (the room's last 20 messages, oldest first, each shaped like a room `MSG` push; `[]` for a new room) · `LEAVE{room}` · `LIST{what:"rooms"|"users"}`→`items`.
+`JOIN{room}`→`members`,`history` (the room's last 20 messages, oldest first, each shaped like a room `MSG` push; `[]` for a new room) · `LEAVE{room}` · `LIST{what:"rooms"|"users"}`→`items`, or `LIST{what:"members",room}`→`items` (the names in that room; `NO_SUCH_ROOM` if it does not exist).
 One active session per account: a `LOGIN` with the correct password for an account that is already online is refused with `ALREADY_ONLINE`, and the first session is not affected.
 
 **Ports 5001/5002:** first frame `{"id":1,"type":"ATTACH","token":T}`. Then
