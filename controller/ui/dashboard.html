@@ -61,18 +61,24 @@
   .g-two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 
   /* KPI strip */
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
-  @media (min-width: 1100px) { .kpis { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
-  .kpi { background: var(--panel); border: 1px solid var(--line2); border-radius: 14px; padding: 12px 14px; position: relative; overflow: hidden; }
-  .kpi::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--k, var(--cyan)); }
-  .kpi .l { color: var(--muted); font-size: .78rem; }
-  .kpi .v { font: 600 1.7rem/1.15 var(--mono); letter-spacing: -0.02em; margin-top: 2px; }
-  .kpi .v small { font-size: .8rem; color: var(--muted); margin-left: 4px; font-weight: 500; }
+  .kpis { display: grid; grid-template-columns: minmax(250px, 1.25fr) repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(98px, auto); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: linear-gradient(180deg, var(--panel), #0f1730); border: 1px solid var(--line2); border-radius: 14px; padding: 13px 15px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; min-width: 0; }
+  .kpi::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--k, var(--cyan)); opacity: .9; }
+  .kpi .top { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: .8rem; }
+  .kpi .ic { width: 26px; height: 26px; flex: none; display: grid; place-items: center; border-radius: 8px; color: var(--k, var(--cyan)); background: color-mix(in srgb, var(--k, var(--cyan)) 14%, transparent); }
+  .kpi .ic svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .kpi .v { font: 600 1.85rem/1.1 var(--mono); letter-spacing: -0.02em; }
+  .kpi .v small { font-size: .78rem; color: var(--muted); margin-left: 5px; font-weight: 500; letter-spacing: 0; }
+  .kpi .cap { color: var(--faint); font-size: .76rem; min-height: 1.1em; }
+  .gauge-kpi { grid-row: span 2; align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 18px 16px; }
+  .gauge-kpi .ringwrap { position: relative; width: 150px; height: 150px; }
+  .gauge-kpi svg.ring { width: 100%; height: 100%; }
+  .gauge-kpi .mid { position: absolute; inset: 0; display: grid; place-content: center; }
+  .gauge-kpi .mid .v { font-size: 2.3rem; } .gauge-kpi .mid .v small { margin: 0; font-size: 1rem; }
+  .gauge-kpi .mid .sub { color: var(--muted); font: .78rem var(--mono); }
+  .gauge-kpi .l { color: var(--muted); font-size: .8rem; } .gauge-kpi .state { font-weight: 650; font-size: .92rem; }
   .kpi.hot { --k: var(--throttle); border-color: rgba(251,191,36,.5); }
   .kpi.bad { --k: var(--block); border-color: rgba(251,90,110,.5); }
-  .gauge-kpi { grid-column: span 2; display: flex; align-items: center; gap: 14px; }
-  .gauge-kpi svg { width: 86px; height: 86px; flex: none; }
-  .gauge-kpi .v { font-size: 2rem; }
 
   /* map */
   #map { width: 100%; height: auto; }
@@ -140,14 +146,19 @@
   .incident.bad { background: rgba(251,90,110,.1); border-color: rgba(251,90,110,.45); color: var(--block); }
   .incident .pt { font-weight: 500; color: var(--ink); }
 
-  .pipe { display: grid; grid-template-columns: minmax(0,1fr) 54px minmax(0,1fr) 54px minmax(0,1fr); align-items: stretch; margin-bottom: 16px; }
-  .pipe .node { background: var(--panel); border: 1px solid var(--line2); border-radius: 14px; padding: 12px 14px; min-width: 0; }
-  .pipe .node .h { color: var(--muted); font-size: .78rem; } .pipe .node .b { font-weight: 650; margin-top: 2px; overflow-wrap: anywhere; }
-  .pipe .node .s { font: .82rem var(--mono); color: var(--cyan); margin-top: 3px; }
-  .pipe .arrow { display: grid; place-items: center; } .pipe .arrow svg { width: 40px; height: 16px; }
-  .pipe .arrow path { stroke: var(--line); stroke-width: 2; fill: none; } .pipe .arrow.fire path { stroke: var(--cyan); stroke-dasharray: 5 5; animation: flow .8s linear infinite; }
-  .pipe .node.fire { border-color: rgba(60,215,244,.55); box-shadow: 0 0 22px rgba(60,215,244,.12); }
-
+  .pipe { display: grid; grid-template-columns: minmax(0,1fr) 44px minmax(0,1fr) 44px minmax(0,1fr); align-items: stretch; margin-bottom: 14px; padding: 6px; background: var(--bg2); border: 1px solid var(--line2); border-radius: 18px; }
+  .pipe .node { display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 0 12px; align-items: center; background: linear-gradient(180deg, var(--panel), #0f1730); border: 1px solid var(--line2); border-radius: 13px; padding: 13px 15px; min-width: 0; transition: border-color .3s, box-shadow .3s; }
+  .pipe .num { grid-row: span 3; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font: 700 .9rem var(--mono); color: var(--cyan); background: rgba(60,215,244,.1); border: 1px solid rgba(60,215,244,.35); }
+  .pipe .node.last .num { color: var(--allow); background: rgba(45,212,167,.1); border-color: rgba(45,212,167,.35); }
+  .pipe .h { color: var(--muted); font-size: .76rem; }
+  .pipe .b { font-weight: 650; font-size: .98rem; margin: 1px 0; overflow-wrap: anywhere; }
+  .pipe .s { font: .78rem var(--mono); color: var(--faint); overflow-wrap: anywhere; }
+  .pipe .arrow { display: grid; place-items: center; } .pipe .arrow svg { width: 30px; height: 16px; }
+  .pipe .arrow path { stroke: var(--line); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .pipe .arrow.fire path { stroke: var(--cyan); stroke-dasharray: 5 5; animation: flow .8s linear infinite; }
+  .pipe .node.fire { border-color: rgba(60,215,244,.55); box-shadow: 0 0 22px rgba(60,215,244,.14); }
+  .pipe .node.fire .s { color: var(--cyan); }
+  @media (max-width: 760px) { .pipe { grid-template-columns: minmax(0,1fr); gap: 4px; } .pipe .arrow { height: 20px; transform: rotate(90deg); } }
   .prog { display: flex; align-items: center; gap: 14px; margin: 0 0 6px; }
   .prog .barx { flex: 1; height: 8px; background: var(--bg2); border-radius: 5px; overflow: hidden; border: 1px solid var(--line2); } .prog .barx i { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--allow)); transition: width .4s; }
   .step { display: grid; grid-template-columns: 30px minmax(0,1fr) auto; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line2); align-items: start; }
@@ -169,7 +180,7 @@
 
   @media (max-width: 960px) {
     .g-main, .g-two { grid-template-columns: minmax(0, 1fr); }
-    .gauge-kpi { grid-column: 1 / -1; }
+    .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .gauge-kpi { grid-column: 1 / -1; grid-row: auto; }
     .mapwrap { overflow-x: auto; } #map { min-width: 600px; }
     .hostrow { grid-template-columns: 1fr; gap: 4px; }
     .req { grid-template-columns: 14px 1fr; } .req .proof { grid-column: 2; text-align: left; }
@@ -206,18 +217,23 @@
     <div class="pipe" id="pipe" aria-label="How a chat event becomes switch rules"></div>
     <div class="kpis">
       <div class="kpi gauge-kpi" id="k-link">
-        <svg viewBox="0 0 100 100" role="img" aria-label="Server link utilisation">
-          <circle cx="50" cy="50" r="40" fill="none" stroke="var(--line)" stroke-width="10"/>
-          <circle id="ring" cx="50" cy="50" r="40" fill="none" stroke="var(--allow)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 251.3" transform="rotate(-90 50 50)" style="transition: stroke-dasharray .5s"/>
-        </svg>
-        <div><div class="l">Server link, switch s1 port 1 (10 Mbps cap)</div><div class="v"><span id="pct">0</span>%<small id="mbps">0.0 Mbps</small></div><div class="sub" id="cstate">Normal</div></div>
+        <div class="l">Server link, switch s1 port 1</div>
+        <div class="ringwrap">
+          <svg class="ring" viewBox="0 0 100 100" role="img" aria-label="Server link utilisation">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="var(--line)" stroke-width="8"/>
+            <circle id="ring" cx="50" cy="50" r="42" fill="none" stroke="var(--allow)" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 263.9" transform="rotate(-90 50 50)" style="transition: stroke-dasharray .5s"/>
+          </svg>
+          <div class="mid"><div class="v"><span id="pct">0</span><small>%</small></div><div class="sub" id="mbps">0.0 Mbps</div></div>
+        </div>
+        <div class="state" id="cstate">Normal</div>
+        <div class="cap">10 Mbps bottleneck, congested above 80%</div>
       </div>
-      <div class="kpi" style="--k:var(--allow)"><div class="l">Hosts allowed</div><div class="v" id="s-hosts">0</div></div>
-      <div class="kpi" id="k-thr" style="--k:var(--throttle)"><div class="l">Throttled</div><div class="v" id="s-thr">0</div></div>
-      <div class="kpi" id="k-blk" style="--k:var(--block)"><div class="l">Blocked</div><div class="v" id="s-blk">0</div></div>
-      <div class="kpi" style="--k:var(--vip)"><div class="l">Dropped at the gate</div><div class="v" id="s-drop">0<small>pkts</small></div></div>
-      <div class="kpi" style="--k:var(--cyan)"><div class="l">Last rule install</div><div class="v" id="s-inst">-</div></div>
-      <div class="kpi" style="--k:var(--cyan)"><div class="l">Last re-route</div><div class="v" id="s-rer">-</div></div>
+      <div class="kpi" style="--k:var(--allow)"><div class="top"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10"/></svg></span>Hosts allowed</div><div class="v" id="s-hosts">0</div><div class="cap" id="c-hosts">registered hosts with a pass rule</div></div>
+      <div class="kpi" id="k-thr" style="--k:var(--throttle)"><div class="top"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16l-6 7v5l-4 2v-7z"/></svg></span>Throttled</div><div class="v" id="s-thr">0</div><div class="cap" id="c-thr">spam or heavy sender</div></div>
+      <div class="kpi" id="k-blk" style="--k:var(--block)"><div class="top"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 6.5l11 11"/></svg></span>Blocked</div><div class="v" id="s-blk">0</div><div class="cap" id="c-blk">repeated bad logins</div></div>
+      <div class="kpi" style="--k:var(--vip)"><div class="top"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4-3.5 7-8 9-4.5-2-8-5-8-9V6z"/></svg></span>Dropped at the gate</div><div class="v" id="s-drop">0<small>pkts</small></div><div class="cap" id="c-drop">from unregistered hosts</div></div>
+      <div class="kpi" style="--k:var(--cyan)"><div class="top"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg></span>Last rule install</div><div class="v" id="s-inst">-</div><div class="cap" id="c-inst">chat event to every switch</div></div>
+      <div class="kpi" style="--k:var(--cyan)"><div class="top"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h12M12 7l5 5-5 5M4 6v12"/></svg></span>Last re-route</div><div class="v" id="s-rer">-</div><div class="cap" id="c-rer">link failure to recovery</div></div>
     </div>
     <div class="grid g-main">
       <div class="grid">
@@ -405,11 +421,11 @@
     var util = Math.max(0, m.util || 0), shown = Math.min(util, 1), rules = snap.rules || {};
     $("pct").textContent = Math.round(util * 100);
     $("mbps").textContent = (util * BOTTLENECK_MBPS).toFixed(1) + " Mbps";
-    var ring = $("ring"); ring.setAttribute("stroke-dasharray", (251.3 * shown).toFixed(1) + " 251.3");
+    var ring = $("ring"); 
     ring.setAttribute("stroke", m.congested ? "var(--throttle)" : "var(--allow)");
     $("k-link").className = "kpi gauge-kpi" + (m.congested ? " hot" : "");
     var st = $("cstate");
-    st.textContent = m.congested ? "Congested" + ((m.heavy || []).length ? ": metering " + m.heavy.join(", ") : "") : (m.mode === "baseline" ? "Baseline: no reaction to load" : "Normal");
+    st.textContent = m.congested ? "Congested" + ((m.heavy || []).length ? ", metering " + m.heavy.join(", ") : "") : (m.mode === "baseline" ? "Baseline: no reaction to load" : "Normal");
     st.style.color = m.congested ? "var(--throttle)" : "";
     $("s-hosts").textContent = (rules.allow || []).length;
     $("s-thr").textContent = (rules.throttle || []).length;
@@ -419,6 +435,9 @@
     $("s-drop").innerHTML = (m.drop_hits || 0) + "<small>pkts</small>";
     $("s-inst").textContent = ms(m.last_flow_install_ms);
     $("s-rer").textContent = ms(m.last_reroute_ms);
+    $("c-thr").textContent = (rules.throttle || []).length ? rules.throttle.join(", ") : "spam or heavy sender";
+    $("c-blk").textContent = (m.blocked || []).length ? m.blocked.join(", ") : "repeated bad logins";
+    $("ring").setAttribute("stroke-dasharray", (263.9 * shown).toFixed(1) + " 263.9");
   }
 
   var NS = "http://www.w3.org/2000/svg";
@@ -751,11 +770,12 @@
     }
     var fresh = rx && now - rx.t < 4, d = rx ? rx.detail || {} : {}, id = inst ? inst.detail || {} : {};
     var rules = last.snap.rules || {}, total = 0; Object.keys(rules).forEach(function (k) { total += rules[k].length; });
-    var arrow = function (on) { return '<div class="arrow' + (on ? " fire" : "") + '"><svg viewBox="0 0 40 16"><path d="M1 8h34M29 3l6 5-6 5"/></svg></div>'; };
+    var arrow = function (on) { return '<div class="arrow' + (on ? " fire" : "") + '"><svg viewBox="0 0 30 16"><path d="M2 8h24M20 3l6 5-6 5"/></svg></div>'; };
+    var node = function (n, head, body, sub, on, cls) { return '<div class="node' + (on ? " fire" : "") + (cls || "") + '"><span class="num">' + n + '</span><div class="h">' + head + '</div><div class="b">' + body + '</div><div class="s">' + sub + "</div></div>"; };
     $("pipe").innerHTML =
-      '<div class="node' + (fresh ? " fire" : "") + '"><div class="h">1. Chat server says</div><div class="b">' + (rx ? esc((d.event || "event") + (d.user ? " " + d.user : "") + (d.room ? " in " + d.room : "")) : "nothing yet") + '</div><div class="s">' + (rx ? esc(d.ip || "") + " · " + clock(rx.t) : "waiting for a chat event") + "</div></div>" + arrow(fresh) +
-      '<div class="node' + (fresh ? " fire" : "") + '"><div class="h">2. Controller decides</div><div class="b">' + (inst ? "install rules after " + esc(id.trigger || "event") : "no rule change needed") + '</div><div class="s">' + (inst ? "confirmed by every switch in " + ms(id.ms) : "") + "</div></div>" + arrow(fresh) +
-      '<div class="node"><div class="h">3. Switches enforce</div><div class="b">' + total + " host rules in force</div><div class=\"s\">" + (rules.allow || []).length + " allowed · " + (rules.throttle || []).length + " throttled · " + (rules.block || []).length + " blocked</div></div>";
+      node(1, "Chat server says", rx ? esc((d.event || "event") + (d.user ? " " + d.user : "") + (d.room ? " in " + d.room : "")) : "Nothing yet", rx ? esc(d.ip || "") + " at " + clock(rx.t) : "waiting for a chat event", fresh) + arrow(fresh) +
+      node(2, "Controller decides", inst ? "Install rules after " + esc(id.trigger || "event") : "No rule change needed", inst ? "all switches confirmed in " + ms(id.ms) : "policy unchanged", fresh) + arrow(fresh) +
+      node(3, "Switches enforce", total + " host rules in force", (rules.allow || []).length + " allowed, " + (rules.throttle || []).length + " throttled, " + (rules.block || []).length + " blocked", false, " last");
   }
   function renderIncident() {
     var m = last.m, rules = last.snap.rules || {}, el = $("incident"), msg = [], bad = false;
