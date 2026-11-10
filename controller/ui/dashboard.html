@@ -129,6 +129,41 @@
   .req.idle .proof { color: var(--faint); }
 
   .foot { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line2); color: var(--faint); font-size: .8rem; }
+  .tools { display: flex; gap: 8px; margin-left: auto; }
+  header .live { margin-left: 0; }
+  .tbtn { appearance: none; font: inherit; font-size: .82rem; font-weight: 600; color: var(--muted); background: var(--bg2); border: 1px solid var(--line2); border-radius: 9px; padding: 5px 12px; cursor: pointer; }
+  .tbtn:hover { color: var(--ink); border-color: var(--line); }
+  .tbtn[aria-pressed="true"] { color: var(--cyan); border-color: var(--cyan); }
+  kbd { font: .72rem var(--mono); padding: 0 5px; border: 1px solid var(--line); border-radius: 4px; color: var(--faint); margin-left: 6px; }
+
+  .incident { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 16px; border-radius: 12px; margin: -6px 0 16px; font-weight: 600; background: rgba(251,191,36,.1); border: 1px solid rgba(251,191,36,.4); color: var(--throttle); }
+  .incident.bad { background: rgba(251,90,110,.1); border-color: rgba(251,90,110,.45); color: var(--block); }
+  .incident .pt { font-weight: 500; color: var(--ink); }
+
+  .pipe { display: grid; grid-template-columns: minmax(0,1fr) 54px minmax(0,1fr) 54px minmax(0,1fr); align-items: stretch; margin-bottom: 16px; }
+  .pipe .node { background: var(--panel); border: 1px solid var(--line2); border-radius: 14px; padding: 12px 14px; min-width: 0; }
+  .pipe .node .h { color: var(--muted); font-size: .78rem; } .pipe .node .b { font-weight: 650; margin-top: 2px; overflow-wrap: anywhere; }
+  .pipe .node .s { font: .82rem var(--mono); color: var(--cyan); margin-top: 3px; }
+  .pipe .arrow { display: grid; place-items: center; } .pipe .arrow svg { width: 40px; height: 16px; }
+  .pipe .arrow path { stroke: var(--line); stroke-width: 2; fill: none; } .pipe .arrow.fire path { stroke: var(--cyan); stroke-dasharray: 5 5; animation: flow .8s linear infinite; }
+  .pipe .node.fire { border-color: rgba(60,215,244,.55); box-shadow: 0 0 22px rgba(60,215,244,.12); }
+
+  .prog { display: flex; align-items: center; gap: 14px; margin: 0 0 6px; }
+  .prog .barx { flex: 1; height: 8px; background: var(--bg2); border-radius: 5px; overflow: hidden; border: 1px solid var(--line2); } .prog .barx i { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--allow)); transition: width .4s; }
+  .step { display: grid; grid-template-columns: 30px minmax(0,1fr) auto; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line2); align-items: start; }
+  .step .ck { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: .8rem; color: transparent; margin-top: 1px; }
+  .step.done .ck { background: var(--ok); border-color: var(--ok); color: #04241c; box-shadow: 0 0 12px rgba(45,212,167,.45); }
+  .step h3 { font-size: .98rem; font-weight: 650; } .step .why { color: var(--muted); font-size: .86rem; margin: 2px 0 6px; }
+  .step .where { color: var(--faint); font-size: .76rem; margin-top: 8px; }
+  pre.cmd { margin: 6px 0 0; padding: 8px 12px; background: var(--bg2); border: 1px solid var(--line2); border-radius: 9px; font: .8rem/1.5 var(--mono); color: #cfe1ff; overflow-x: auto; white-space: pre; }
+  .expect { margin-top: 8px; font-size: .86rem; } .expect b { color: var(--allow); font-weight: 650; }
+  .step .st { font-size: .78rem; font-weight: 650; padding: 2px 10px; border-radius: 999px; background: rgba(143,160,200,.1); color: var(--muted); white-space: nowrap; }
+  .step.done .st { background: rgba(45,212,167,.14); color: var(--allow); }
+  .sect { margin: 22px 0 4px; font-size: .84rem; font-weight: 650; color: var(--muted); }
+
+  body.present { font-size: 18px; } body.present main { max-width: none; padding: 14px 34px 40px; }
+  body.present .foot, body.present .sub, body.present #sectionhint { display: none; }
+  body.present .kpi .v { font-size: 2.1rem; } body.present .panel { padding: 20px 22px; }
   #toast { position: fixed; right: 18px; bottom: 18px; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; font-size: .88rem; opacity: 0; transform: translateY(8px); transition: .2s; pointer-events: none; max-width: 340px; }
   #toast.show { opacity: 1; transform: none; }
 
@@ -152,6 +187,7 @@
       <div><h1>SDN Chat Controller</h1><div class="sub" id="topo">Waiting for the controller</div></div>
     </div>
     <span id="mode" class="badge">...</span>
+    <div class="tools"><button class="tbtn" id="btn-present" aria-pressed="false" title="Bigger text for a projector (P)">Present<kbd>P</kbd></button><button class="tbtn" id="btn-export" title="Download the current state as a JSON file">Export evidence</button></div>
     <div id="live" class="live down" role="status" aria-live="polite"><span class="dot"></span><span id="livetext">Connecting</span></div>
   </header>
 
@@ -160,11 +196,14 @@
     <button role="tab" data-tab="policies" aria-selected="false">Policies<span class="ct" id="ct-pol" hidden>0</span></button>
     <button role="tab" data-tab="traffic" aria-selected="false">Traffic</button>
     <button role="tab" data-tab="results" aria-selected="false">Results</button>
-    <button role="tab" data-tab="deliver" aria-selected="false">Deliverables</button>
+    <button role="tab" data-tab="deliver" aria-selected="false">Demo guide<span class="ct" id="ct-demo" style="background:rgba(60,215,244,.16);color:var(--cyan)">0/0</span></button>
   </nav>
+
+  <div id="incident" class="incident" role="status" hidden></div>
 
   <!-- LIVE -->
   <div class="tab" id="tab-live">
+    <div class="pipe" id="pipe" aria-label="How a chat event becomes switch rules"></div>
     <div class="kpis">
       <div class="kpi gauge-kpi" id="k-link">
         <svg viewBox="0 0 100 100" role="img" aria-label="Server link utilisation">
@@ -274,14 +313,19 @@
     </div>
   </div>
 
-  <!-- DELIVERABLES -->
+  <!-- DEMO GUIDE -->
   <div class="tab" id="tab-deliver" hidden>
     <section class="panel" aria-labelledby="dh">
-      <header><h2 id="dh">Project requirements, with live proof</h2><span>each line shows what the running system is doing for that requirement</span></header>
+      <header><h2 id="dh">Demo guide</h2><span>run a step, and it ticks itself when the controller sees the effect</span>
+        <button class="btn" id="demo-reset" style="margin-left:auto">Reset ticks</button></header>
+      <div class="prog"><span class="mono" id="demo-count">0 of 0</span><div class="barx"><i id="demo-bar" style="width:0"></i></div></div>
+      <div id="steps"></div>
+    </section>
+    <section class="panel" aria-labelledby="dh2" style="margin-top:16px">
+      <header><h2 id="dh2">What the running system proves</h2><span>one line per project requirement, with its live evidence</span></header>
       <div id="reqs"></div>
     </section>
   </div>
-<footer class="foot">CN mini project: multi-client chat network over SDN. Ryu controller, Mininet, Open vSwitch. Docs: <span class="mono">README.md</span>, <span class="mono">docs/results.md</span>, <span class="mono">docs/demo-d2.md</span>.</footer>
 </main>
 <div id="toast" role="status"></div>
 
@@ -313,7 +357,7 @@
     Array.prototype.forEach.call(tabs, function (b) { b.setAttribute("aria-selected", b.dataset.tab === name ? "true" : "false"); });
     ["live", "policies", "traffic", "results", "deliver"].forEach(function (t) { $("tab-" + t).hidden = t !== name; });
     try { localStorage.setItem("sdnTab", name); } catch (e) { /* storage may be blocked */ }
-    if (name === "results") { loadResults(); }
+    if (name === "results") { loadResults(); DONE.compare_viewed = DONE.compare_viewed || true; saveDone(); }
     if (last.m) { render(); }
   }
   Array.prototype.forEach.call(tabs, function (b) { b.addEventListener("click", function () { show(b.dataset.tab); }); });
@@ -398,10 +442,16 @@
       if (cls) { l.setAttribute("class", cls); } if (op) { l.setAttribute("opacity", op); }
       svg.appendChild(l); return l;
     }
+    var load = {}; ((tr && tr.links) || []).forEach(function (k) { load[k.a + "-" + k.b] = k; });
     links.forEach(function (l) {
-      var isdown = down.indexOf(l.join("-")) >= 0, a = pos[l[0]], b = pos[l[1]];
+      var isdown = down.indexOf(l.join("-")) >= 0, a = pos[l[0]], b = pos[l[1]], k = load[l.join("-")];
+      var bpsNow = k ? Math.max(k.ab_bps, k.ba_bps) : 0, u = k ? Math.min(1, bpsNow / k.capacity_bps) : 0;
       var ln = line(a, b, isdown ? "var(--block)" : "var(--line)", isdown ? 3 : 5);
       if (isdown) { ln.setAttribute("stroke-dasharray", "3 9"); }
+      else if (bpsNow > 20000) { line(a, b, u > 0.6 ? "var(--throttle)" : "var(--cyan)", 2 + Math.min(7, u * 40), "flow", 0.9); }
+      var mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      svg.appendChild(mk("text", {x: mx + (l[0] === 1 ? -10 : 14), y: my + 4, "text-anchor": l[0] === 1 ? "end" : "start", style: "font:11px var(--mono);fill:" + (isdown ? "var(--block)" : "var(--muted)")},
+        isdown ? "down" : (k ? bps(bpsNow) : "")));
     });
     var server = [78, 165];
     line(server, pos[1], "var(--line)", 7);
@@ -481,7 +531,7 @@
   function renderLive() {
     var s = last, m = s.m, snap = s.snap, state = s.state;
     renderKpis(m, snap); renderTopo(snap, m, state, s.tr); renderArea();
-    var ev = (s.ev || []).slice().reverse();
+    var ev = (s.ev || []).slice(-40).reverse();
     $("feedempty").hidden = ev.length > 0;
     $("feed").innerHTML = ev.map(function (e) {
       var d = describe(e);
@@ -589,34 +639,148 @@
         '</td><td class="mono">' + (r.reroute_ms_mean ? r.reroute_ms_mean.toFixed(0) : "-") + "</td></tr>"; }).join("") + "</tbody></table>" : "";
   }
 
-  /* ---------- DELIVERABLES ---------- */
+  /* ---------- DEMO GUIDE ---------- */
+  var DONE = {};
+  try { DONE = JSON.parse(localStorage.getItem("sdnDone") || "{}") || {}; } catch (e) { DONE = {}; }
+  function saveDone() { try { localStorage.setItem("sdnDone", JSON.stringify(DONE)); } catch (e) { /* storage blocked */ } }
+  function seen(kind, pred) { return (last.ev || []).some(function (e) { return e.kind === kind && (!pred || pred(e.detail || {})); }); }
+  var STEPS = [
+    {id: "register", t: "A chat event changes the network", why: "Registering a user makes the chat server tell the controller, which installs allow rules on every switch.",
+     where: "Mininet CLI", cmd: ["h2 PYTHONPATH=. python3 chat/client.py --server 10.0.0.1 --user demo1"],
+     expect: "A \"register\" event, then \"Rules installed\" in the feed, and h2 turns teal on the map.",
+     ok: function () { return seen("event_rx", function (d) { return d.event === "register"; }) && seen("flow_install"); }},
+    {id: "gate", t: "Unregistered hosts are dropped at the switch", why: "Until a host registers, packets to the chat ports are dropped by a priority-100 rule.",
+     where: "Mininet CLI", cmd: ["h3 python3 -c \"import socket; s=socket.socket(); s.settimeout(2); print(s.connect_ex(('10.0.0.1', 5001)))\""],
+     expect: "The command times out (error 11 or timed out) and \"Dropped at the gate\" goes up.",
+     ok: function () { return (last.m.drop_hits || 0) > 0; }},
+    {id: "vip", t: "Prioritisation: VIP traffic", why: "A user or room marked VIP gets the high-priority queue.",
+     where: "this page", cmd: ["Policies tab: type a username, press Make VIP"],
+     expect: "That user's host gets a violet VIP chip and a priority-250 rule.",
+     ok: function () { return ((last.snap.rules || {}).vip || []).length > 0; }},
+    {id: "spam", t: "Spam is flagged and throttled", why: "More than 20 messages in 5 seconds makes the server flag the user; the controller throttles that host.",
+     where: "Mininet CLI", cmd: ["h4 PYTHONPATH=. python3 chat/bot.py --users 1 --prefix spam --spammer --duration 8 --out /tmp/spam.csv"],
+     expect: "h4 turns amber (Throttled) with the reason \"spam\" in the Policies tab; it clears about 30 s after it stops.",
+     ok: function () { return seen("throttle_on") || ((last.snap.rules || {}).throttle || []).length > 0; }},
+    {id: "block", t: "Unauthorised access is blocked", why: "Five wrong passwords make the server report a block; every chat port is dropped for that host for 60 s.",
+     where: "second terminal", cmd: ["PYTHONPATH=. python3 tools/post_event.py block \"\" 10.0.0.4 --reason bad_login"],
+     expect: "h4 turns red (Blocked) with a countdown in the Policies tab, and a priority-400 rule appears.",
+     ok: function () { return seen("block_on") || (last.m.blocked || []).length > 0; }},
+    {id: "admin", t: "Operator control from the dashboard", why: "The controller can be overridden from this page, from the controller machine only.",
+     where: "this page", cmd: ["Policies tab: press Unblock or Unflag next to a host"],
+     expect: "The host returns to Allowed and an \"Admin\" line appears in the feed.",
+     ok: function () { return seen("admin_action"); }},
+    {id: "congestion", t: "Congestion: queues and meters", why: "A 12 Mbit/s stream into the 10 Mbit/s link fills it; chat keeps its own queue and the heavy sender gets a meter.",
+     where: "Mininet CLI", cmd: ["h1 PYTHONPATH=. python3 chat/server.py --host 10.0.0.1 > /tmp/server.log 2>&1 &", "h1 iperf -s -u -p 5201 > /dev/null 2>&1 &", "h3 iperf -c 10.0.0.1 -u -b 12M -t 25 -p 5201 > /dev/null 2>&1 &", "h2 python3 chat/bot.py --users 3 --prefix demo --duration 10 --out /tmp/demo.csv"],
+     expect: "The link gauge goes above 80% and turns amber, \"Congestion\" and \"Metering\" appear, and the bot's p50 stays in single-digit milliseconds.",
+     ok: function () { return seen("congestion_on") || seen("heavy_on") || !!last.m.congested; }},
+    {id: "files", t: "File sharing is bulk traffic", why: "Files travel on port 5003, so the switch puts them in the bulk queue and chat latency is not affected.",
+     where: "Mininet CLI", cmd: ["h2 PYTHONPATH=. python3 eval/file_transfer.py --server 10.0.0.1 --mb 3"],
+     expect: "It prints the upload and download speed and \"intact: yes\"; the Traffic tab's Bulk bar grows by about 3 MB.",
+     ok: function () { return ((last.tr || {}).classes || {}).bulk > 500000; }},
+    {id: "down", t: "Link failure: automatic re-route", why: "The controller sees the port go down, deletes the routes and relearns them over the other path.",
+     where: "Mininet CLI", cmd: ["pingall", "h2 ping -c 100 -i 0.2 10.0.0.3 > /tmp/ping.txt &", "link s2 s3 down"],
+     expect: "The s2\u2013s3 link turns red and \"Rerouted\" shows the recovery time; the ping carries on.",
+     ok: function () { return seen("link_down") && seen("reroute_done"); }},
+    {id: "up", t: "Recovery when the link returns", why: "The topology is learned again and the direct path is used once more.",
+     where: "Mininet CLI", cmd: ["link s2 s3 up"], expect: "A \"Link restored\" line appears and the link turns grey again.",
+     ok: function () { return seen("link_up"); }},
+    {id: "compare", t: "Comparison with a static baseline", why: "The same scenarios were measured with the controller reduced to plain forwarding.",
+     where: "this page", cmd: ["Results tab"], expect: "SDN and baseline bars side by side for idle, congested, flood and link failure.",
+     ok: function () { return !!DONE.compare_viewed; }}
+  ];
+  function updateDemo() {
+    var n = 0, changed = false;
+    STEPS.forEach(function (st) {
+      var hit = false; try { hit = !!st.ok(); } catch (e) { hit = false; }
+      if (hit && !DONE[st.id]) { DONE[st.id] = Date.now(); changed = true; toast("Demo step done: " + st.t); }
+      if (DONE[st.id]) { n += 1; }
+    });
+    if (changed) { saveDone(); }
+    $("ct-demo").textContent = n + "/" + STEPS.length;
+    return n;
+  }
+  function renderDemo() {
+    var n = updateDemo();
+    $("demo-count").textContent = n + " of " + STEPS.length + " shown";
+    $("demo-bar").style.width = (n / STEPS.length * 100) + "%";
+    $("steps").innerHTML = STEPS.map(function (st) {
+      var done = !!DONE[st.id];
+      return '<div class="step' + (done ? " done" : "") + '"><span class="ck" aria-hidden="true">✓</span><div><h3>' + esc(st.t) + '</h3><p class="why">' + esc(st.why) + "</p>" +
+        st.cmd.map(function (c) { return '<pre class="cmd">' + esc(c) + "</pre>"; }).join("") +
+        '<p class="expect"><b>You should see:</b> ' + esc(st.expect) + '</p><div class="where">Run in: ' + esc(st.where) + '</div></div><span class="st">' + (done ? "Shown " + clock(DONE[st.id] / 1000) : "Not yet") + "</span></div>";
+    }).join("");
+  }
+  $("demo-reset").addEventListener("click", function () { DONE = {}; saveDone(); renderDemo(); toast("Ticks cleared"); });
+
+  /* ---------- REQUIREMENTS WITH PROOF ---------- */
   function renderDeliver() {
+    renderDemo();
     var s = last, m = s.m, snap = s.snap, st = s.state, rules = snap.rules || {}, tr = s.tr || {hosts: {}, classes: {}};
     var evs = s.ev || [], kinds = {}; evs.forEach(function (e) { kinds[e.kind] = (kinds[e.kind] || 0) + 1; });
     var users = Object.keys(st.registered || {}).length, rooms = Object.keys(st.rooms || {}).length;
     var sent = (tr.classes.room || 0) + (tr.classes.private || 0) + (tr.classes.bulk || 0);
     var res = resultsCache || [], cong = {}; res.forEach(function (r) { if (r.scenario === "congested") { cong[r.mode] = r; } });
     var items = [
-      ["Mininet topology and SDN controller", "", "Switches connected to the controller over OpenFlow 1.3, flow rules installed.", (snap.switches || []).length > 0, (snap.switches || []).length + " switches, " + snap.topology + " topology"],
-      ["Socket application (TCP chat)", "", "Chat server on ports 5000-5003 with registered users and rooms.", users > 0, users + " hosts registered, " + rooms + " rooms"],
-      ["Socket to SDN integration", "", "Chat events (register, join, flag, block) change switch rules within milliseconds.", (kinds.event_rx || 0) > 0 && m.last_flow_install_ms > 0, "last rule install " + ms(m.last_flow_install_ms) + ", " + (kinds.event_rx || 0) + " recent chat events"],
-      ["Complete application functionality", "", "Many clients, rooms, private messages and shared files under normal load.", sent > 0, bytes(sent) + " counted across " + Object.keys(tr.hosts || {}).length + " hosts"],
-      ["Dynamic SDN: filtering, prioritisation, blocking", "", "Gate drops unregistered hosts, VIP and bulk queues, spam throttle, block.", (rules.throttle || []).length + (rules.block || []).length + (rules.vip || []).length + (m.drop_hits || 0) > 0,
+      ["Mininet topology and SDN controller", "Switches connected to the controller over OpenFlow 1.3, flow rules installed.", (snap.switches || []).length > 0, (snap.switches || []).length + " switches, " + snap.topology + " topology"],
+      ["Socket application (TCP chat)", "Chat server on ports 5000-5003 with registered users and rooms.", users > 0, users + " hosts registered, " + rooms + " rooms"],
+      ["Socket to SDN integration", "Chat events (register, join, flag, block) change switch rules within milliseconds.", (kinds.event_rx || 0) > 0 && m.last_flow_install_ms > 0, "last rule install " + ms(m.last_flow_install_ms) + ", " + (kinds.event_rx || 0) + " recent chat events"],
+      ["Complete application functionality", "Many clients, rooms, private messages and shared files under normal load.", sent > 0, bytes(sent) + " counted across " + Object.keys(tr.hosts || {}).length + " hosts"],
+      ["Dynamic SDN: filtering, prioritisation, blocking", "Gate drops unregistered hosts, VIP and bulk queues, spam throttle, block.", (rules.throttle || []).length + (rules.block || []).length + (rules.vip || []).length + (m.drop_hits || 0) > 0,
         (m.drop_hits || 0) + " gate drops, " + (rules.vip || []).length + " VIP, " + (rules.throttle || []).length + " throttled, " + (rules.block || []).length + " blocked"],
-      ["Dynamic SDN: rerouting and recovery", "", "Link failure on the triangle is detected and traffic moves to the other path.", snap.topology === "triangle" && (m.last_reroute_ms > 0 || (m.links_down || []).length > 0),
+      ["Dynamic SDN: rerouting and recovery", "Link failure on the triangle is detected and traffic moves to the other path.", snap.topology === "triangle" && (m.last_reroute_ms > 0 || (m.links_down || []).length > 0),
         snap.topology === "triangle" ? ((m.links_down || []).length ? "link down, rerouting active" : "last re-route " + ms(m.last_reroute_ms)) : "needs the triangle topology"],
-      ["Challenging scenario: congestion", "", "Over 80% load marks the link congested and meters the heaviest sender.", !!m.congested || (m.heavy || []).length > 0 || (kinds.congestion_on || 0) > 0,
-        m.congested ? "congested now, metering " + (m.heavy || []).join(", ") : ((kinds.congestion_on || 0) ? "congestion seen in the recent log" : "not triggered yet: run the iperf step")],
-      ["Challenging scenario: unauthorised access", "", "Five failed logins block the host; unregistered hosts are dropped at the gate.", (m.blocked || []).length > 0 || (m.drop_hits || 0) > 0,
+      ["Challenging scenario: congestion", "Over 80% load marks the link congested and meters the heaviest sender.", !!m.congested || (m.heavy || []).length > 0 || (kinds.congestion_on || 0) > 0,
+        m.congested ? "congested now, metering " + (m.heavy || []).join(", ") : ((kinds.congestion_on || 0) ? "congestion seen in the recent log" : "not triggered yet: see the congestion step above")],
+      ["Challenging scenario: unauthorised access", "Five failed logins block the host; unregistered hosts are dropped at the gate.", (m.blocked || []).length > 0 || (m.drop_hits || 0) > 0,
         (m.blocked || []).length ? (m.blocked.join(", ") + " blocked") : (m.drop_hits || 0) + " packets dropped at the gate"],
-      ["Performance evaluation against a baseline", "", "Latency, loss, scale and recovery measured for SDN and a static baseline.", res.length > 0,
+      ["Performance evaluation against a baseline", "Latency, loss, scale and recovery measured for SDN and a static baseline.", res.length > 0,
         res.length ? (res.length + " result rows" + (cong.sdn && cong.baseline ? "; congestion p50 " + cong.sdn.p50_ms_mean.toFixed(1) + " ms (SDN) vs " + cong.baseline.p50_ms_mean.toFixed(0) + " ms (baseline)" : "")) : "open the Results tab to load them"],
-      ["Documentation and reproducible demo", "", "README, architecture, results, testing and demo docs; make reproduce.", true, "see README and docs/ in the repository"]
+      ["Documentation and reproducible demo", "README, architecture, results, testing and demo docs; make reproduce.", true, "see README and docs/ in the repository"]
     ];
     $("reqs").innerHTML = items.map(function (it) {
-      return '<div class="req ' + (it[3] ? "ok" : "idle") + '"><span class="st"></span><div><b>' + esc(it[0]) + '</b>' + (it[1] ? '<span class="marks">' + it[1] + "</span>" : "") + "<p>" + esc(it[2]) + '</p></div><div class="proof">' + esc(it[4]) + "</div></div>";
+      return '<div class="req ' + (it[2] ? "ok" : "idle") + '"><span class="st"></span><div><b>' + esc(it[0]) + "</b><p>" + esc(it[1]) + '</p></div><div class="proof">' + esc(it[3]) + "</div></div>";
     }).join("");
   }
+
+  /* ---------- PIPELINE STRIP AND INCIDENT BANNER ---------- */
+  function renderPipe() {
+    var ev = last.ev || [], now = Date.now() / 1000, rx = null, inst = null;
+    for (var i = ev.length - 1; i >= 0; i--) {
+      if (!inst && ev[i].kind === "flow_install") { inst = ev[i]; }
+      if (ev[i].kind === "event_rx") { rx = ev[i]; break; }
+    }
+    var fresh = rx && now - rx.t < 4, d = rx ? rx.detail || {} : {}, id = inst ? inst.detail || {} : {};
+    var rules = last.snap.rules || {}, total = 0; Object.keys(rules).forEach(function (k) { total += rules[k].length; });
+    var arrow = function (on) { return '<div class="arrow' + (on ? " fire" : "") + '"><svg viewBox="0 0 40 16"><path d="M1 8h34M29 3l6 5-6 5"/></svg></div>'; };
+    $("pipe").innerHTML =
+      '<div class="node' + (fresh ? " fire" : "") + '"><div class="h">1. Chat server says</div><div class="b">' + (rx ? esc((d.event || "event") + (d.user ? " " + d.user : "") + (d.room ? " in " + d.room : "")) : "nothing yet") + '</div><div class="s">' + (rx ? esc(d.ip || "") + " · " + clock(rx.t) : "waiting for a chat event") + "</div></div>" + arrow(fresh) +
+      '<div class="node' + (fresh ? " fire" : "") + '"><div class="h">2. Controller decides</div><div class="b">' + (inst ? "install rules after " + esc(id.trigger || "event") : "no rule change needed") + '</div><div class="s">' + (inst ? "confirmed by every switch in " + ms(id.ms) : "") + "</div></div>" + arrow(fresh) +
+      '<div class="node"><div class="h">3. Switches enforce</div><div class="b">' + total + " host rules in force</div><div class=\"s\">" + (rules.allow || []).length + " allowed · " + (rules.throttle || []).length + " throttled · " + (rules.block || []).length + " blocked</div></div>";
+  }
+  function renderIncident() {
+    var m = last.m, rules = last.snap.rules || {}, el = $("incident"), msg = [], bad = false;
+    if ((m.links_down || []).length) { msg.push("Link " + m.links_down.map(function (l) { return "s" + l[0] + "–s" + l[1]; }).join(", ") + " is down. Traffic is rerouted."); bad = true; }
+    if (m.congested) { msg.push("The server link is congested" + ((m.heavy || []).length ? ". Metering " + m.heavy.join(", ") + "." : ".")); }
+    if ((m.blocked || []).length) { msg.push(m.blocked.join(", ") + " blocked after repeated bad logins."); bad = true; }
+    if ((rules.throttle || []).length) { msg.push(rules.throttle.join(", ") + " throttled for spam."); }
+    el.hidden = !msg.length; el.className = "incident" + (bad ? " bad" : "");
+    el.innerHTML = msg.map(function (t) { return '<span class="pt">' + esc(t) + "</span>"; }).join("");
+  }
+
+  /* ---------- PRESENT MODE, SHORTCUTS, EXPORT ---------- */
+  function setPresent(on) { document.body.classList.toggle("present", on); $("btn-present").setAttribute("aria-pressed", on ? "true" : "false"); }
+  $("btn-present").addEventListener("click", function () { setPresent(!document.body.classList.contains("present")); });
+  document.addEventListener("keydown", function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey || /input|textarea|select/i.test((e.target || {}).tagName || "")) { return; }
+    var names = ["live", "policies", "traffic", "results", "deliver"], i = "12345".indexOf(e.key);
+    if (i >= 0 && e.key.length === 1) { show(names[i]); } else if (e.key === "p" || e.key === "P") { $("btn-present").click(); }
+  });
+  $("btn-export").addEventListener("click", function () {
+    if (!last.m) { toast("Nothing to export yet"); return; }
+    var doc = {exported_at: new Date().toISOString(), metrics: last.m, state: last.state, snapshot: last.snap, traffic: last.tr, policy_actions: last.ex, recent_events: last.ev, demo_steps_shown: DONE};
+    var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(doc, null, 2)], {type: "application/json"}));
+    a.download = "sdn-evidence-" + new Date().toISOString().replace(/[:.]/g, "-") + ".json"; document.body.appendChild(a); a.click(); a.remove(); toast("Evidence file downloaded");
+  });
 
   function render() {
     var s = last, active = (document.querySelector("#tabs button[aria-selected=true]") || {}).dataset;
@@ -624,7 +788,8 @@
     $("mode").textContent = s.m.mode === "baseline" ? "Baseline mode" : "SDN mode";
     $("mode").className = "badge" + (s.m.mode === "baseline" ? " baseline" : "");
     $("topo").textContent = (s.snap.topology === "triangle" ? "Triangle of 3 switches" : "Single switch") + ", " + (s.snap.switches || []).length + " connected";
-    if (tab === "live") { renderLive(); }
+    renderIncident(); updateDemo();
+    if (tab === "live") { renderPipe(); renderLive(); }
     renderPolicies();                                   // cheap, and it keeps the red count on the tab current
     if (tab === "traffic") { renderTraffic(); }
     if (tab === "deliver") { renderDeliver(); }
@@ -636,7 +801,7 @@
   var timer = null;
   function tick(once) {
     clearTimeout(timer);
-    Promise.all([get("/state"), get("/metrics"), get("/snapshot"), get("/events?n=40"),
+    Promise.all([get("/state"), get("/metrics"), get("/snapshot"), get("/events?n=300"),
                  get("/traffic").catch(function () { return {hosts: {}, classes: {}}; }),
                  get("/explain").catch(function () { return {actions: [], rules: [], policy: {}, thresholds: {}}; })]).then(function (r) {
       failures = 0;

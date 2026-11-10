@@ -39,6 +39,9 @@ MAC_TO_IP = {HOST_MAC[h]: ip for h, ip in CLIENT_IPS.items()}
 ETH_LLDP = 0x88CC
 
 
+LINK_BPS = 100_000_000          # every inter-switch link in the Mininet topologies is 100 Mbit/s
+
+
 class ChatSdn(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
     _CONTEXTS = {"wsgi": WSGIApplication}
@@ -140,7 +143,11 @@ class ChatSdn(app_manager.RyuApp):
             if len(hist) >= 2:
                 (t0, b0), (t1, b1) = hist[0], hist[-1]
                 h["bps"] = round(max(0, b1 - b0) * 8 / max(t1 - t0, 1e-6), 1)
-        return {"hosts": hosts, "classes": classes, "bottleneck_bps": BOTTLENECK_BPS, "util": round(self.util, 4)}
+        links = [{"a": a, "b": b, "ab_bps": round(self.tx_rate.get((a, pa), 0.0), 1),
+                  "ba_bps": round(self.tx_rate.get((b, pb), 0.0), 1), "capacity_bps": LINK_BPS}
+                 for a, pa, b, pb in TRIANGLE_LINKS] if self.is_triangle() else []
+        return {"hosts": hosts, "classes": classes, "links": links, "bottleneck_bps": BOTTLENECK_BPS,
+                "util": round(self.util, 4)}
 
     def explain(self):
         """Every active policy action, with the reason it exists and when it started (for the Policies tab)."""
