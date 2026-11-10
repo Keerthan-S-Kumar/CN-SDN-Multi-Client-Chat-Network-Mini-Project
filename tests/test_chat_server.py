@@ -433,6 +433,29 @@ def test_room_message_when_not_a_member(make_user):
     assert recv_push(a.room, timeout=0.5) is None
 
 
+def test_join_returns_recent_history_oldest_first(make_user):
+    room = "h" + uuid.uuid4().hex[:8]
+    a, b = make_user(), make_user()
+    a.join(room)
+    for i in range(25):
+        a.say(room, f"m{i}")
+    for _ in range(25):
+        assert recv_msg(a.room)["type"] == "OK"  # the server has handled every message
+    r = b.join(room)
+    texts = [m["text"] for m in r["history"]]
+    assert texts == [f"m{i}" for i in range(5, 25)], texts  # the last 20, oldest first
+    assert all(m["from"] == a.name and m["room"] == room for m in r["history"])
+
+
+def test_new_room_and_private_messages_have_no_history(make_user):
+    a, b = make_user(), make_user()
+    a.pm_to(b.name, "secret")
+    assert recv_push(b.pm)["text"] == "secret"
+    room = "h" + uuid.uuid4().hex[:8]
+    assert a.join(room)["history"] == []
+    assert b.join(room)["history"] == []  # private messages are never stored
+
+
 def test_no_messages_after_leaving(make_user):
     room = "r" + uuid.uuid4().hex[:8]
     a, b = make_user(), make_user()

@@ -39,6 +39,8 @@ tokens = {}                       # token -> name
 online = {}                       # name -> Conn on port 5000
 rooms = {}                        # room -> set of names
 attached = {"room": {}, "pm": {}, "bulk": {}} # kind -> {name: Conn}
+history = {}                      # room -> its last HISTORY_LIMIT messages (kept after the room empties, in memory only)
+HISTORY_LIMIT, HISTORY_ROOMS, HISTORY_BYTES = 20, 200, 40000
 
 class Conn:
     """One client connection. send_lock stops two threads mixing frames."""
@@ -130,6 +132,29 @@ def push(kind, name, obj):
             pass
 
 
+def remember(room, msg):
+    """Keep the last HISTORY_LIMIT messages of a room, and at most HISTORY_ROOMS rooms."""
+    with lock:
+        h = history.setdefault(room, [])
+        h.append(msg)
+        del h[:-HISTORY_LIMIT]
+        while len(history) > HISTORY_ROOMS:
+            history.pop(next(iter(history)))
+
+
+def recent(room):
+    """The newest messages of a room that fit comfortably in one frame, oldest first."""
+    with lock:
+        h = list(history.get(room, ()))
+    out, size = [], 0
+    for m in reversed(h):
+        size += len(json.dumps(m))
+        if size > HISTORY_BYTES:
+            break
+        out.append(m)
+    return out[::-1]
+
+
 # ---------------- port 5000 ----------------
 def handle_control(conn, req):
     t = req.get("type")
@@ -189,7 +214,7 @@ def handle_control(conn, req):
             rooms.setdefault(room, set()).add(conn.user)
             members = sorted(rooms[room])
         emit("join", conn.user, conn.ip, room=room)
-        return ok(conn, req, members=members)
+        return ok(conn, req, members=members, history=recent(room))
 
     if t == "LEAVE":
         room = req.get("room")
@@ -309,6 +334,7 @@ def handle_file_chunk(conn, req):
             "file": {"fid": rec["fid"], "name": rec["name"], "size": rec["size"]}}
     if rec["room"]:
         note["room"] = rec["room"]
+        remember(rec["room"], note)
         with lock:
             targets = [n for n in rooms.get(rec["room"], ()) if n != conn.user]
     else:
@@ -377,6 +403,7 @@ def handle_data(conn, req, port):
                "from": conn.user, "text": text, "ts": time.time()}
         if "seq" in req:
             msg["seq"] = req["seq"]
+        remember(room, msg)
         for n in targets:
             push("room", n, msg)
         return ok(conn, req)
