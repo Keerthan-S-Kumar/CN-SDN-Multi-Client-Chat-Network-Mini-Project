@@ -334,7 +334,7 @@ def make_handler(server_ip):
                     r = s.control("JOIN", room=room)
                     if room not in s.rooms:
                         s.rooms.append(room)
-                    return self._json({"ok": True, "room": room, "members": r.get("members", [])})
+                    return self._json({"ok": True, "room": room, "members": r.get("members", []), "history": r.get("history", [])})
                 if path == "/api/leave":
                     room = str(d.get("room", ""))
                     s.control("LEAVE", room=room)

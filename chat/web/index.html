@@ -251,7 +251,7 @@
 <script>
 (function () {
   "use strict";
-  var sid = null, me = null, cur = null, convs = {}, unread = {}, rooms = [], people = [], allRooms = [], dmExtra = [], es = null, timers = [];
+  var creds = null, reconnecting = false, sid = null, me = null, cur = null, convs = {}, unread = {}, rooms = [], people = [], allRooms = [], dmExtra = [], es = null, timers = [];
   var COLORS = ["#0e8fa8", "#6d52e0", "#c27a0a", "#d0364a", "#9d46c0", "#12906f", "#2f6fe0", "#a06a00"];
   var EMOJI = ["😀", "👍", "🎉", "😂", "❤️", "🚀", "🤔", "🙏"];
   function $(i) { return document.getElementById(i); }
@@ -419,9 +419,13 @@
     if (!/^[A-Za-z0-9_]{1,16}$/.test(name)) { toast("Room names use letters, numbers and underscore, up to 16 characters."); return; }
     api("join", {room: name}).then(function (r) {
       if (!r.ok) { add(cur || "room:", {kind: "bad", text: say(r)}); return; }
-      if (rooms.indexOf(name) < 0) { rooms.push(name); }
+      var first = rooms.indexOf(name) < 0;
+      if (first) { rooms.push(name); }
       if (allRooms.indexOf(name) < 0) { allRooms.push(name); }
       $("jr").value = "";
+      if (first) {          // earlier messages of the room, oldest first
+        (r.history || []).forEach(function (h) { add("room:" + name, {kind: "msg", who: h.from, mine: h.from === me, text: h.text, ts: h.ts, file: h.file}); });
+      }
       add("room:" + name, {kind: "sys", text: "You joined #" + name + ". Here now: " + r.members.join(", ")});
       openConv("room:" + name);
     });
@@ -429,7 +433,7 @@
 
   /* ---------- presence and network ---------- */
   function refresh() {
-    if (!sid) { return; }
+    if (!sid || reconnecting) { return; }
     api("list", {what: "users"}).then(function (r) {
       if (r.ok) { people = r.items.filter(function (n) { return n !== me; }).sort(); dmExtra = dmExtra.filter(function (n) { return people.indexOf(n) < 0; }); drawNav(); if (cur && cur.indexOf("pm:") === 0) { openConvKeep(); } }
     });
@@ -501,11 +505,45 @@
     if (n.blocked || n.throttled) { alert.textContent = n.blocked ? "Your host is blocked by the network. Messages will not get through until the block expires." : "Your host is being throttled for sending too fast. Slow down and it will clear."; alert.className = "alert" + (n.blocked ? " bad" : ""); alert.hidden = false; }
   }
 
+  /* ---------- automatic reconnect ---------- */
+  // When the live connection is gone for good (server restarted, session reaped), sign in again with the
+  // name and password typed at sign-in (held in memory only), rejoin the rooms, and carry on.
+  function lostConnection() {
+    if (reconnecting || !creds || !sid) { return; }
+    reconnecting = true;
+    var banner = $("conn"), tries = 0, triedRegister = false;
+    banner.textContent = "Connection lost. Reconnecting..."; banner.hidden = false;
+    if (es) { es.close(); es = null; }
+    try { fetch("/api/logout", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({sid: sid})}).catch(function () { /* old session already gone */ }); } catch (e) { /* ignore */ }
+    function login(mode) {
+      return fetch("/api/login", {method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({mode: mode, user: creds.user, password: creds.password})}).then(function (r) { return r.json(); });
+    }
+    function giveUp() { banner.textContent = "Could not reconnect. Reload the page and sign in again."; reconnecting = false; sid = null; }
+    function retry() { setTimeout(attempt, 3000); }
+    function resumed(r) {
+      sid = r.sid; me = r.user; connect();
+      rooms.slice().forEach(function (n) { api("join", {room: n}); });
+      reconnecting = false; banner.hidden = true; toast("Reconnected"); refresh();
+    }
+    function attempt() {
+      if (!creds) { return; }
+      if (++tries > 30) { giveUp(); return; }
+      login(triedRegister ? "register" : "login").then(function (r) {
+        if (r.ok) { return resumed(r); }
+        if (r.code === "BAD_CREDENTIALS" && !triedRegister) { triedRegister = true; return attempt(); }   // server restarted and forgot the account
+        if (r.code === "ALREADY_ONLINE" || r.code === "SERVER_UNREACHABLE") { return retry(); }
+        giveUp();
+      }).catch(retry);
+    }
+    setTimeout(attempt, 1000);
+  }
+
   /* ---------- live events ---------- */
   function connect() {
     es = new EventSource("/api/events?sid=" + sid);
     es.onopen = function () { $("conn").hidden = true; };
-    es.onerror = function () { $("conn").hidden = false; };
+    es.onerror = function () { $("conn").hidden = false; if (es && es.readyState === 2) { lostConnection(); } };
     es.onmessage = function (ev) {
       var m = JSON.parse(ev.data);
       if (m.type === "MSG") {
@@ -513,7 +551,7 @@
         else { add("pm:" + m.from, {kind: "pm", who: m.from, text: m.text, ts: m.ts, file: m.file}); }
       } else if (m.type === "ERR") {
         add(cur || "room:", {kind: "bad", text: say(m)});
-      } else if (m.type === "CLOSED") { $("conn").hidden = false; }
+      } else if (m.type === "CLOSED") { $("conn").hidden = false; lostConnection(); }
     };
   }
 
@@ -526,7 +564,7 @@
       body: JSON.stringify({mode: mode, user: $("u").value.trim(), password: $("p").value})})
       .then(function (r) { return r.json(); }).then(function (r) {
         if (!r.ok) { $("lerr").textContent = say(r); return; }
-        sid = r.sid; me = r.user;
+        sid = r.sid; me = r.user; creds = {user: r.user, password: $("p").value};   // kept in this tab only, to reconnect
         $("login").hidden = true; $("app").hidden = false; $("meName").textContent = me;
         $("meAv").style.background = color(me); $("meAv").textContent = me[0].toUpperCase();
         connect(); drawNav(); drawThread(true); refresh(); timers.push(setInterval(refresh, 4000));
@@ -538,6 +576,7 @@
   function send() {
     var box = $("msg"), text = box.value;
     if (!text.trim() || !cur || cur.indexOf("browse:") === 0) { return; }
+    if (reconnecting) { toast("Reconnecting... try again in a moment."); return; }
     var room = cur.indexOf("room:") === 0, name = cur.slice(cur.indexOf(":") + 1), key = cur;
     api(room ? "msg" : "pm", room ? {room: name, text: text} : {to: name, text: text}).then(function (r) {
       if (!r.ok) { add(key, {kind: "bad", text: say(r)}); return; }
@@ -565,7 +604,7 @@
   tw.addEventListener("dragleave", function () { depth = Math.max(0, depth - 1); if (!depth) { tw.classList.remove("over"); } });
   tw.addEventListener("drop", function (e) { e.preventDefault(); depth = 0; tw.classList.remove("over"); var f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) { uploadFile(f); } });
   $("menu").onclick = function () { $("rail").classList.toggle("open"); };
-  $("out").onclick = function () { if (es) { es.close(); } timers.forEach(clearInterval); api("logout").then(function () { location.reload(); }); };
+  $("out").onclick = function () { creds = null; if (es) { es.close(); } timers.forEach(clearInterval); api("logout").then(function () { location.reload(); }); };
   window.addEventListener("beforeunload", function () {
     if (sid) { navigator.sendBeacon("/api/logout", new Blob([JSON.stringify({sid: sid})], {type: "application/json"})); }
   });
