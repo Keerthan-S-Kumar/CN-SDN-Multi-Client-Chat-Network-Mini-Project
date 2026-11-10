@@ -14,7 +14,7 @@ and the passing test output. Deliverable 2: dashboard under congestion and link 
 
 ## Redesigned UI (design previews, sample data)
 
-`dashboard-v2-*.png` and `web-chat-v2-network-panel.png` show the redesigned dashboard and web chat. The chat server and
+`dashboard-v3-*.png` and `web-chat-v2-network-panel.png` show the redesigned dashboard and web chat. The chat server and
 web gateway were real; the controller was replaced by a small data stub so every state (congestion, a throttled host,
 a re-route) could be shown at once. They are previews of the layout, not measurements. Live screenshots from the
 Mininet VM replace them before the final demo.

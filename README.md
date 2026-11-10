@@ -63,7 +63,7 @@ Course: Computer Networks (UE25CS243A), SDN and socket programming mini project.
 - A live dashboard served by the controller at `http://<controller>:8080/ui` with five tabs: Live (map coloured
   by policy, link load, traffic by class, event feed), Policies (every rule, who is limited and why, unflag,
   unblock, VIP and ban controls), Traffic (bytes per host and class, queues and meters), Results (SDN vs baseline)
-  and Deliverables (the project requirements with live proof).
+  and Demo guide (step-by-step commands that tick themselves off, plus the project requirements with live proof). Press P for a presentation view and use Export evidence to save the current state as JSON.
 - A browser chat client whose "Your network path" card shows what the controller is doing to your host.
 
 ## Architecture

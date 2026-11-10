@@ -354,6 +354,11 @@ class TestApp(unittest.TestCase):
         self.assertEqual(t["hosts"]["10.0.0.2"]["bytes"]["room"], 1500)
         self.assertEqual(t["hosts"]["10.0.0.2"]["bytes"]["bulk"], 9000)
         self.assertEqual(t["classes"]["bulk"], 9000)
+        self.app.tx_rate[(1, 2)], self.app.tx_rate[(2, 2)] = 5e6, 1e6
+        links = self.app.traffic()["links"]
+        if self.app.is_triangle():
+            l12 = [l for l in links if (l["a"], l["b"]) == (1, 2)][0]
+            self.assertEqual((l12["ab_bps"], l12["ba_bps"]), (5e6, 1e6))
         self.app._count_traffic(2, [stat("10.0.0.2", C.PORT_ROOM, 100)])             # counter reset after re-install
         self.assertEqual(self.app.traffic()["hosts"]["10.0.0.2"]["bytes"]["room"], 1600)
 
