@@ -10,4 +10,4 @@ jobs:
           python-version: "3.11"
       - run: pip install pytest
       - run: python -m compileall -q chat common controller topology eval tools
-      - run: PYTHONPATH=. python -m pytest tests/test_chat_server.py tests/test_web_gateway.py tests/test_ui_api.py -q
+      - run: PYTHONPATH=. python -m pytest tests/test_chat_server.py tests/test_web_gateway.py tests/test_ui_api.py tests/test_eval.py -q
