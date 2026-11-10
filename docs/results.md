@@ -58,6 +58,37 @@ Per run at 50 and 100 bots (p50 / p95 in ms, loss %):
 - **Flood:** one spammer sending 200 messages per second on its own host. SDN did not improve latency here; baseline was slightly faster. A likely reason (not tested separately): spam messages are tiny, so their bandwidth is small next to the 10 Mbps bottleneck and the cost lands on the chat server's CPU, which throttling at the switch cannot relieve. The SDN run also pays a small cost to flag the user and install the throttle rules.
 - **Scalability:** up to 25 bots the two modes are the same. At 50 bots SDN stays steady (p95 40 to 70 ms in all three runs). Baseline matches it in two runs (p95 about 85 ms) and has one bad run (p95 2.6 s, 0.75% loss), which is what makes its mean look much worse; we treat that as an outlier, not as an SDN advantage. At 100 bots both modes are overloaded: median latency is seconds and 20 to 58% of messages are lost in most runs, and the runs differ a lot (baseline run 3 was fine, with a median of 295 ms and 1% loss). All three SDN runs were bad at 100 bots, but with three runs and this spread we do not claim SDN is worse. A likely cause, not tested, is the CPU of the VM and the single-process Python chat server, which sends every message to 99 receivers; that limit is in the server and the VM, not in the network. On this VM the setup saturates somewhere between 50 and 100 bots.
 
+## Spread and reaction times
+
+Mean ± standard deviation over the runs of each scenario (from `summary.csv`):
+
+| Scenario | Mode | Runs | p50 (ms) | p95 (ms) |
+|---|---|---|---|---|
+| idle | sdn | 3 | 4.3 ± 0.2 | 29.1 ± 14.4 |
+| idle | baseline | 3 | 4.4 ± 0.2 | 24.8 ± 11.8 |
+| congested | sdn | 3 | 3.5 ± 0.3 | 19.7 ± 7.3 |
+| congested | baseline | 3 | 164.8 ± 5.2 | 270.4 ± 17.0 |
+| flood | sdn | 3 | 3.6 ± 0.3 | 24.2 ± 3.9 |
+| flood | baseline | 3 | 2.1 ± 0.0 | 17.2 ± 10.7 |
+| linkfail | sdn | 3 | 4.3 ± 0.5 | 35.0 ± 5.3 |
+| linkfail | baseline | 3 | 2.5 ± 0.1 | 11355.0 ± 134.7 |
+| scale50 | sdn | 3 | 11.3 ± 4.2 | 54.9 ± 14.8 |
+| scale50 | baseline | 3 | 21.2 ± 11.8 | 938.6 ± 1479.1 |
+| scale100 | sdn | 3 | 4756.9 ± 2329.0 | 12168.6 ± 6038.5 |
+| scale100 | baseline | 3 | 3023.9 ± 2475.7 | 7002.3 ± 3373.7 |
+
+Controller reaction times for the `sdn` runs, from the controller and runner event logs (`eval/extra_metrics.py`, written to `eval/results/reaction_times.csv`). The baseline has no controller reactions to time.
+
+| Scenario | What is timed | Runs | Mean ± std (ms) |
+|---|---|---|---|
+| linkfail | link down seen by the controller | 3 | 5.8 ± 0.8 |
+| linkfail | new routes installed and confirmed | 3 | 13.5 ± 0.9 |
+| linkfail | failover, link cut to routes confirmed | 3 | 16.0 ± 4.9 |
+| congested | iperf start to congestion response on | 3 | 8856.5 ± 5547.5 |
+
+- **Failover:** the controller sees the port go down within a few milliseconds and has the new routes installed and confirmed in tens of milliseconds, so the path is repaired long before the 10 s the baseline waits for the link to return. Times start when the runner's link-down command returns, so the few milliseconds the command itself takes are not included.
+- **Congestion:** the monitor polls once per second and needs two samples above 80% utilization of the bottleneck, so a few seconds is the minimum. The measured mean is longer and varies a lot between runs; we did not investigate the extra delay (the iperf ramp-up is one possible part). By design the queue assignment for chat traffic is installed when a user registers, so it does not wait for this detector; the detector adds the heavy-hitter meter. We did not test that split separately.
+
 ## Limits
 
 - All measurements are on a virtual machine, so absolute numbers depend on its CPU and timing; the comparison between modes is the useful result.
