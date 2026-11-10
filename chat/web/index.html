@@ -29,12 +29,19 @@
   /* ---------- sign in ---------- */
   #login { min-height:100%; display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); }
   .brand { background:linear-gradient(160deg,#101a3a,#0a1022 70%); color:var(--rail-ink); padding:56px 56px 40px; display:flex; flex-direction:column; justify-content:space-between; gap:32px; }
-  .brand h1 { font-size:2.6rem; line-height:1.05; margin:0 0 14px; letter-spacing:-.03em; max-width:12ch; }
+  .brand h1 { font-size:2.7rem; line-height:1.08; margin:0 0 14px; letter-spacing:-.03em; max-width:16ch; }
   .brand p { color:var(--rail-muted); max-width:38ch; margin:0; font-size:1.05rem; }
   .brand svg { width:100%; max-width:520px; height:auto; }
   .brand .legend { color:var(--rail-muted); font-size:.9rem; margin:0; }
+  .feats { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:12px 18px; }
+  .feats li { display:flex; gap:11px; align-items:flex-start; color:var(--rail-muted); font-size:.9rem; line-height:1.35; }
+  .feats li b { display:block; color:var(--rail-ink); font-size:.95rem; }
+  .feats .fi { width:32px; height:32px; border-radius:10px; flex:none; display:grid; place-items:center; background:var(--accent-soft); color:var(--accent); border:1px solid rgba(60,215,244,.25); }
+  .feats .fi svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .brand .flowline { stroke-dasharray:6 6; animation:fl 1s linear infinite; } @keyframes fl { to { stroke-dashoffset:-12; } }
+  #lform { background:linear-gradient(180deg,var(--panel),#0f1730); border:1px solid var(--rule); border-radius:20px; padding:30px 30px 24px; }
   .formside { display:flex; align-items:center; justify-content:center; padding:32px; }
-  #lform { width:100%; max-width:380px; }
+  #lform { width:100%; max-width:420px; }
   #lform h2 { margin:0 0 4px; font-size:1.4rem; letter-spacing:-.01em; }
   #lform .sub { margin:0 0 20px; color:var(--muted); }
   #lform label { display:block; margin:14px 0 5px; font-weight:600; font-size:.92rem; }
@@ -52,13 +59,13 @@
   aside.rail { background:var(--rail); color:var(--rail-ink); display:flex; flex-direction:column; min-height:0; }
   .rail .top { padding:16px 16px 10px; display:flex; align-items:center; gap:10px; }
   .logo { width:32px; height:32px; border-radius:9px; background:var(--accent); color:var(--accent-ink); display:grid; place-items:center; flex:none; }
-  .rail .top strong { font-size:1.05rem; letter-spacing:-.01em; }
+  .rail .top strong { font-size:1.05rem; letter-spacing:-.01em; display:block; line-height:1.15; } .rail .top small { color:var(--rail-muted); font-size:.76rem; }
   .scroll { overflow:auto; padding:6px 10px 12px; flex:1; min-height:0; }
-  .rail h2 { font-size:.82rem; font-weight:650; color:var(--rail-muted); margin:16px 8px 6px; }
+  .rail h2 { font-size:.78rem; font-weight:650; color:var(--rail-muted); margin:18px 8px 6px; display:flex; align-items:center; gap:8px; } .rail h2 .n { font:600 .72rem var(--mono,monospace); padding:0 7px; border-radius:999px; background:var(--rail-hover); }
   .nav { list-style:none; margin:0; padding:0; }
   .nav button { width:100%; display:flex; align-items:center; gap:9px; padding:7px 8px; border:0; background:transparent; color:inherit; border-radius:8px; text-align:left; }
   .nav button:hover { background:var(--rail-hover); }
-  .nav button[aria-current="true"] { background:var(--rail-on); font-weight:650; }
+  .nav button[aria-current="true"] { background:var(--rail-on); font-weight:650; box-shadow:inset 3px 0 0 var(--accent); }
   .nav .name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .hash { width:22px; text-align:center; color:var(--rail-muted); font-weight:700; }
   .badge { background:var(--accent); color:var(--accent-ink); border-radius:999px; font-size:.78rem; font-weight:700; padding:0 7px; min-width:20px; text-align:center; }
@@ -77,6 +84,9 @@
   .dot { position:absolute; right:-3px; bottom:-3px; width:10px; height:10px; border-radius:50%; background:var(--ok); border:2px solid var(--rail); }
 
   main { display:flex; flex-direction:column; min-width:0; min-height:0; background:var(--ground); }
+  .hic { width:40px; height:40px; border-radius:12px; display:grid; place-items:center; font-weight:700; font-size:1.15rem; flex:none; background:var(--accent-soft); color:var(--accent); border:1px solid rgba(60,215,244,.25); }
+  .hic.pm { background:var(--pm-soft); color:var(--pm); border-color:rgba(165,139,250,.3); } .hic.av { color:#fff; border:0; }
+  .netchip::before { content:""; display:inline-block; width:7px; height:7px; border-radius:50%; background:currentColor; margin-right:7px; vertical-align:1px; box-shadow:0 0 8px currentColor; }
   header.bar { background:var(--panel); border-bottom:1px solid var(--rule); padding:12px 20px; display:flex; align-items:center; gap:12px; box-shadow:var(--shadow); }
   header.bar .t { min-width:0; flex:1; }
   header.bar h1 { margin:0; font-size:1.1rem; letter-spacing:-.01em; display:flex; align-items:center; gap:8px; }
@@ -95,18 +105,21 @@
   #thread { position:absolute; inset:0; overflow:auto; padding:18px 20px 8px; }
   .day { text-align:center; margin:14px 0 10px; color:var(--muted); font-size:.85rem; font-weight:600; display:flex; align-items:center; gap:12px; }
   .day::before, .day::after { content:""; flex:1; height:1px; background:var(--rule); }
-  .msg { display:grid; grid-template-columns:34px minmax(0,1fr); gap:0 12px; padding:2px 0; }
-  .msg.cont { margin-top:-1px; }
-  .msg .av { margin-top:2px; }
-  .msg .gutter { color:transparent; font-size:.72rem; text-align:right; padding-top:5px; }
-  .msg:hover .gutter { color:var(--muted); }
-  .msg .head { display:flex; align-items:baseline; gap:8px; }
-  .msg .head b { font-weight:700; }
-  .msg .head time { color:var(--muted); font-size:.8rem; }
-  .msg .body { white-space:pre-wrap; overflow-wrap:anywhere; max-width:72ch; }
-  .msg.mine .head b { color:var(--accent); }
-  .msg.pm .body { border-left:3px solid var(--pm); padding-left:10px; }
-  .msg:not(.pm) .body { color:#dfe7fb; }
+  .msg { display:flex; gap:10px; padding:2px 0; align-items:flex-start; }
+  .msg.mine { flex-direction:row-reverse; }
+  .msg .av, .msg .sp { margin-top:20px; width:34px; flex:none; } .msg.cont .av, .msg.cont .sp { margin-top:0; }
+  .msg .col { max-width:min(74%,600px); min-width:0; display:flex; flex-direction:column; align-items:flex-start; }
+  .msg.mine .col { align-items:flex-end; }
+  .msg .head { display:flex; align-items:baseline; gap:8px; margin:0 4px 3px; }
+  .msg .head b { font-weight:700; font-size:.88rem; }
+  .bubble { padding:8px 13px 5px; border-radius:6px 18px 18px 18px; background:#16213f; border:1px solid var(--rule); min-width:0; max-width:100%; }
+  .msg.cont:not(.mine) .bubble { border-top-left-radius:6px; } .msg:not(.cont):not(.mine) .bubble { border-top-left-radius:18px; }
+  .msg.mine .bubble { border-radius:18px 6px 18px 18px; background:linear-gradient(135deg,rgba(60,215,244,.26),rgba(60,215,244,.12)); border-color:rgba(60,215,244,.38); }
+  .msg.mine:not(.cont) .bubble { border-top-right-radius:18px; }
+  .msg.pm .bubble { background:linear-gradient(135deg,rgba(165,139,250,.22),rgba(165,139,250,.1)); border-color:rgba(165,139,250,.38); }
+  .msg .body { white-space:pre-wrap; overflow-wrap:anywhere; color:#e6ecfc; }
+  .bubble time { display:block; text-align:right; color:var(--muted); font-size:.68rem; margin-top:1px; opacity:.85; }
+  .bubble .filecard { background:rgba(8,13,28,.35); }
   .filecard { display:inline-flex; align-items:center; gap:12px; padding:9px 12px; border:1px solid var(--rule); border-radius:12px; background:linear-gradient(180deg,#14203f,#101a36); max-width:100%; }
   .filecard .ico { width:36px; height:36px; border-radius:9px; background:var(--accent-soft); color:var(--accent); display:grid; place-items:center; flex:none; font-weight:700; font-size:.72rem; }
   .filecard .meta { min-width:0; } .filecard .meta b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:30ch; }
@@ -126,7 +139,13 @@
   #jump { position:absolute; left:50%; bottom:12px; transform:translateX(-50%); background:var(--ink); color:var(--ground); border:0; border-radius:999px; padding:6px 16px; font-weight:650; box-shadow:0 2px 8px rgba(0,0,0,.25); }
 
   form#send { padding:10px 20px 16px; background:var(--ground); }
-  .composer { background:var(--panel); border:1px solid var(--rule); border-radius:14px; padding:8px 10px 8px 14px; display:flex; flex-direction:column; gap:6px; box-shadow:var(--shadow); }
+  .composer { position:relative; background:var(--panel); border:1px solid var(--rule); border-radius:18px; padding:8px 10px 8px 14px; display:flex; flex-direction:column; gap:6px; box-shadow:var(--shadow); }
+  .tools .tb { border:0; background:transparent; padding:5px 7px; border-radius:8px; color:var(--muted); display:inline-grid; place-items:center; }
+  .tools .tb:hover:not(:disabled) { background:var(--accent-soft); color:var(--accent); } .tools .tb:disabled { opacity:.4; cursor:not-allowed; }
+  .emopop { position:absolute; left:10px; bottom:calc(100% + 8px); display:flex; gap:2px; padding:6px; background:#16213f; border:1px solid var(--rule); border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.45); z-index:5; }
+  .emopop .emo { border:0; background:transparent; font-size:1.25rem; padding:4px 6px; border-radius:8px; } .emopop .emo:hover { background:var(--accent-soft); }
+  .tools .btn.primary.round { width:38px; height:38px; padding:0; border-radius:50%; display:grid; place-items:center; }
+  .tools .btn.primary.round svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
   .composer:focus-within { border-color:var(--accent); }
   .composer textarea { border:0; padding:4px 0; resize:none; max-height:150px; min-height:24px; background:transparent; outline:0; border-radius:0; }
   .tools { display:flex; align-items:center; gap:2px; }
@@ -137,33 +156,39 @@
   .btn:disabled { opacity:.5; cursor:not-allowed; }
 
   aside.info { background:var(--panel); border-left:1px solid var(--rule); overflow:auto; padding:16px; min-height:0; }
-  aside.info h2 { font-size:.92rem; margin:0 0 8px; }
+  aside.info h2 { font-size:.9rem; margin:0 0 8px; display:flex; align-items:center; gap:8px; } aside.info h2 .n { font:600 .72rem ui-monospace,monospace; padding:0 7px; border-radius:999px; background:var(--rule); color:var(--muted); }
   .people { list-style:none; margin:0 0 20px; padding:0; }
   .people button { width:100%; display:flex; align-items:center; gap:10px; padding:6px 4px; border:0; background:transparent; border-radius:8px; text-align:left; }
   .people button:hover { background:var(--accent-soft); }
   .people .dot { border-color:var(--panel); }
-  .net { border:1px solid var(--rule); border-radius:12px; padding:14px; background:linear-gradient(180deg,#131d3a,#0f1730); }
-  .spark { width:100%; height:46px; display:block; margin:6px 0 2px; }
+  .net { border:1px solid var(--rule); border-radius:16px; padding:14px; background:linear-gradient(180deg,#131d3a,#0f1730); --st:var(--accent); }
+  .net.warn { --st:var(--warn); } .net.bad { --st:var(--bad); }
+  .net .stat { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .net .stat .big { width:38px; height:38px; border-radius:12px; display:grid; place-items:center; flex:none; color:var(--st); background:color-mix(in srgb, var(--st) 14%, transparent); border:1px solid color-mix(in srgb, var(--st) 40%, transparent); }
+  .net .stat .big svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .net .stat b { display:block; font-size:1rem; } .net .stat span { color:var(--muted); font-size:.8rem; }
+  .net .pathsvg { width:100%; height:auto; display:block; margin:2px 0 10px; }
+  .net .pathsvg .fl { stroke:var(--st); stroke-width:3; stroke-linecap:round; stroke-dasharray:6 6; animation:fl 1s linear infinite; }
+  .net .tiles { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+  .net .tile { background:rgba(8,13,28,.45); border:1px solid var(--rule); border-radius:11px; padding:8px 10px; min-width:0; }
+  .net .tile span { display:block; color:var(--muted); font-size:.74rem; } .net .tile b { display:block; font:600 .98rem/1.3 ui-monospace,Menlo,Consolas,monospace; overflow-wrap:anywhere; }
+  .net .meter { height:6px; border-radius:3px; background:var(--rule); margin-top:6px; overflow:hidden; } .net .meter i { display:block; height:100%; background:var(--ok); border-radius:3px; transition:width .5s; } .net .meter i.hot { background:var(--warn); }
+  .net .chips { margin:0 0 8px; }
+  .spark { width:100%; height:50px; display:block; margin:2px 0; }
   .why { margin:8px 0 0; padding:8px 10px; border-radius:9px; background:var(--warn-soft); color:var(--warn); font-size:.85rem; }
   .why.bad { background:var(--bad-soft); color:var(--bad); }
   #toast { position:fixed; right:18px; bottom:18px; background:#16213f; border:1px solid var(--rule); border-radius:10px; padding:9px 14px; font-size:.9rem; max-width:340px; z-index:6; }
-  .net svg { width:100%; height:auto; display:block; margin-bottom:8px; }
-  .net .row { display:flex; justify-content:space-between; gap:10px; padding:4px 0; border-top:1px solid var(--rule); font-size:.9rem; }
-  .net .row:first-of-type { border-top:0; }
-  .net .row span:first-child { color:var(--muted); }
   .chip { display:inline-block; font-size:.78rem; font-weight:650; padding:1px 9px; border-radius:999px; margin:0 4px 4px 0; background:var(--accent-soft); color:var(--accent); }
-  .chip.vip { background:var(--pm-soft); color:var(--pm); }
-  .chip.warn { background:var(--warn-soft); color:var(--warn); }
-  .chip.bad { background:var(--bad-soft); color:var(--bad); }
-  .chip.off { background:var(--rule); color:var(--muted); }
+  .chip.vip { background:var(--pm-soft); color:var(--pm); } .chip.warn { background:var(--warn-soft); color:var(--warn); } .chip.bad { background:var(--bad-soft); color:var(--bad); } .chip.off { background:var(--rule); color:var(--muted); }
   .note { color:var(--muted); font-size:.85rem; margin:8px 0 0; }
 
   #conn { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); background:var(--bad); color:#fff; padding:6px 16px; border-radius:999px; font-weight:650; z-index:5; }
 
   @media (max-width:1100px) { #app { grid-template-columns:260px minmax(0,1fr); } aside.info { display:none; } }
   @media (max-width:760px) {
+    .feats { grid-template-columns:1fr; } #lform { padding:22px 20px; } .msg .col { max-width:86%; }
     .tools .hint { display:none; } .tools .btn.primary { margin-left:auto; }
-    #login { grid-template-columns:1fr; } .brand { padding:28px; } .brand h1 { font-size:2rem; } .brand svg { display:none; }
+    #login { grid-template-columns:1fr; } .brand { padding:28px; } .brand h1 { font-size:2rem; } .brand svg { display:none; } .brand .feats { display:none; }
     #app { grid-template-columns:1fr; }
     aside.rail { position:fixed; inset:0 18% 0 0; z-index:10; transform:translateX(-102%); transition:transform .2s; }
     aside.rail.open { transform:none; box-shadow:0 0 0 100vmax rgba(0,0,0,.45); }
@@ -181,7 +206,7 @@
       <p>Rooms and private messages on a software-defined network. The switch decides who may connect, and how fast.</p>
     </div>
     <svg viewBox="0 0 520 150" role="img" aria-label="A client reaches the chat server through a switch controlled by a controller">
-      <g fill="none" stroke="#8ea3b8" stroke-width="2"><path d="M70 100 H220"/><path d="M300 100 H450"/><path d="M260 36 V70" stroke-dasharray="4 4"/></g>
+      <g fill="none" stroke="#8ea3b8" stroke-width="2"><path class="flowline" stroke="#3cd7f4" d="M120 100 H210"/><path class="flowline" stroke="#3cd7f4" d="M310 100 H400"/><path d="M260 40 V70" stroke-dasharray="4 4"/></g>
       <g font-size="13" fill="#e6eef6" text-anchor="middle">
         <rect x="20" y="78" width="100" height="44" rx="10" fill="#1b3550"/><text x="70" y="105">Your browser</text>
         <rect x="210" y="70" width="100" height="60" rx="12" fill="#0e8fa8"/><text x="260" y="105">Switch</text>
@@ -189,7 +214,12 @@
         <rect x="205" y="6" width="110" height="34" rx="9" fill="#6d52e0"/><text x="260" y="28">Controller</text>
       </g>
     </svg>
-    <p class="legend">Your sign-in is checked by the chat server. Your connection is allowed, queued or limited by the switch.</p>
+    <ul class="feats">
+      <li><span class="fi"><svg viewBox="0 0 24 24"><path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/></svg></span><div><b>Rooms</b>Talk with a group in a shared room.</div></li>
+      <li><span class="fi"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></span><div><b>Private messages</b>One to one, in the fast queue.</div></li>
+      <li><span class="fi"><svg viewBox="0 0 24 24"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.6-8.6a3.7 3.7 0 015.2 5.2l-8.6 8.6a1.8 1.8 0 01-2.6-2.6l7.9-7.9"/></svg></span><div><b>File sharing</b>Up to 5 MB, sent as bulk traffic.</div></li>
+      <li><span class="fi"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4-3.5 7-8 9-4.5-2-8-5-8-9V6z"/></svg></span><div><b>Network aware</b>The switch allows, queues or limits you, and you can see why.</div></li>
+    </ul>
   </div>
   <div class="formside">
     <form id="lform">
@@ -207,15 +237,15 @@
 
 <div id="app" hidden>
   <aside class="rail" id="rail" aria-label="Rooms and people">
-    <div class="top"><span class="logo" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h13"/></svg></span><strong>Chat network</strong></div>
+    <div class="top"><span class="logo" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h13"/></svg></span><div><strong>Chat network</strong><small>on a software-defined network</small></div></div>
     <div class="scroll">
-      <h2>Rooms</h2>
+      <h2>Rooms <span class="n" id="nRooms">0</span></h2>
       <ul class="nav" id="rooms"></ul>
       <p class="empty" id="noRooms">You are not in any room yet.</p>
       <form class="joinbox" id="jform"><label class="sr" for="jr">Room name</label><input id="jr" placeholder="New or existing room" required maxlength="16" pattern="[A-Za-z0-9_]{1,16}" title="Letters, numbers and underscore, up to 16 characters"><button type="submit">Join</button></form>
       <h2 id="browseH" hidden>Other rooms</h2>
       <ul class="nav" id="browse"></ul>
-      <h2>Direct messages</h2>
+      <h2>Direct messages <span class="n" id="nDms">0</span></h2>
       <ul class="nav" id="dms"></ul>
       <p class="empty" id="noDms">Nobody else is online.</p>
     </div>
@@ -225,6 +255,7 @@
   <main>
     <header class="bar">
       <button id="menu" type="button" aria-label="Open rooms and people">Menu</button>
+      <span class="hic" id="hic" hidden></span>
       <div class="t"><h1><span id="tt">Choose a room or a person</span> <span class="pill room" id="tpill" hidden></span></h1><small id="ts"></small></div>
       <span class="pill netchip" id="netchip" hidden></span>
     </header>
@@ -234,14 +265,15 @@
       <div class="composer">
         <label class="sr" for="msg">Message</label>
         <textarea id="msg" rows="1" placeholder="Write a message" disabled maxlength="2000"></textarea>
-        <div class="tools" id="emos"><button type="button" class="clip" id="clip" title="Share a file (up to 5 MB)" aria-label="Share a file" disabled><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.6-8.6a3.7 3.7 0 015.2 5.2l-8.6 8.6a1.8 1.8 0 01-2.6-2.6l7.9-7.9"/></svg></button><input type="file" id="pick" hidden><span class="hint">Enter to send, Shift+Enter for a new line</span><button class="btn primary" type="submit" id="sbtn" disabled>Send</button></div>
+        <div class="tools" id="emos"><button type="button" class="tb" id="clip" title="Share a file (up to 5 MB)" aria-label="Share a file" disabled><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.6-8.6a3.7 3.7 0 015.2 5.2l-8.6 8.6a1.8 1.8 0 01-2.6-2.6l7.9-7.9"/></svg></button><input type="file" id="pick" hidden><button type="button" class="tb" id="emoBtn" title="Add an emoji" aria-label="Add an emoji" aria-expanded="false" disabled><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9.5h.01M15 9.5h.01"/></svg></button><span class="hint">Enter to send, Shift+Enter for a new line</span><button class="btn primary round" type="submit" id="sbtn" aria-label="Send" title="Send" disabled><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button></div>
+        <div class="emopop" id="emopop" hidden></div>
       </div>
     </form>
   </main>
 
   <aside class="info" aria-label="Online people and network">
-    <div id="inroomBox" hidden><h2 id="inroomH">In this room</h2><ul class="people" id="inroom"></ul></div>
-    <h2>Online on the server</h2>
+    <div id="inroomBox" hidden><h2>In this room <span class="n" id="nIn">0</span></h2><ul class="people" id="inroom"></ul></div>
+    <h2>Online on the server <span class="n" id="nOn">0</span></h2>
     <ul class="people" id="online"></ul>
     <h2>Your network path</h2>
     <div class="net" id="net"><p class="note">Checking the network...</p></div>
@@ -326,16 +358,17 @@
       if (dk !== lastDay) { t.appendChild(el("div", "day", dayLabel(m.ts))); lastDay = dk; prev = null; }
       var cont = prev && prev.who === m.who && prev.kind === m.kind && m.ts - prev.ts < 300;
       var row = el("div", "msg" + (cont ? " cont" : "") + (m.mine ? " mine" : "") + (m.kind === "pm" ? " pm" : ""));
-      if (cont) { row.appendChild(el("span", "gutter", hhmm(m.ts))); }
-      else { row.appendChild(avatar(m.who)); }
-      var col = el("div");
-      if (!cont) {
-        var h = el("div", "head"); h.appendChild(el("b", "", m.mine ? "You" : m.who)); h.appendChild(el("time", "", hhmm(m.ts)));
+      if (!m.mine) { if (cont) { row.appendChild(el("span", "sp")); } else { row.appendChild(avatar(m.who)); } }
+      var col = el("div", "col");
+      if (!cont && !m.mine) {
+        var h = el("div", "head"); h.appendChild(el("b", "", m.who));
         if (m.kind === "pm") { h.appendChild(el("span", "pill pm", "private")); }
         col.appendChild(h);
       }
-      if (m.file) { col.appendChild(fileCard(m)); } else { col.appendChild(el("div", "body", m.text)); }
-      row.appendChild(col); t.appendChild(row); prev = m;
+      var bub = el("div", "bubble");
+      if (m.file) { bub.appendChild(fileCard(m)); } else { bub.appendChild(el("div", "body", m.text)); }
+      bub.appendChild(el("time", "", hhmm(m.ts)));
+      col.appendChild(bub); row.appendChild(col); t.appendChild(row); prev = m;
     });
     if (force || near) { t.scrollTop = t.scrollHeight; $("jump").hidden = true; } else { $("jump").hidden = false; }
   }
@@ -394,7 +427,7 @@
     others.forEach(function (n) { navItem(br, "browse:" + n, n, {hash: true, onclick: function () { joinRoom(n); closeRail(); }}); });
     var names = people.concat(dmExtra.filter(function (n) { return people.indexOf(n) < 0; }));
     names.forEach(function (n) { navItem(d, "pm:" + n, n, {online: people.indexOf(n) >= 0}); });
-    $("noDms").hidden = names.length > 0;
+    $("noDms").hidden = names.length > 0; $("nRooms").textContent = rooms.length; $("nDms").textContent = names.length; $("nOn").textContent = people.length;
     var on = $("online"); on.textContent = "";
     if (!people.length) { var li = el("li", "note", "Nobody else is online."); on.appendChild(li); }
     people.forEach(function (n) {
@@ -411,7 +444,7 @@
     var box = $("inroomBox"), ul = $("inroom"), inRoom = !!cur && cur.indexOf("room:") === 0;
     box.hidden = !inRoom;
     if (!inRoom) { return; }
-    $("inroomH").textContent = "In this room (" + roomMembers.length + ")";
+    $("nIn").textContent = roomMembers.length;
     ul.textContent = "";
     roomMembers.forEach(function (n) {
       var li = el("li"), b = el("button"); b.type = "button";
@@ -437,7 +470,9 @@
     $("tt").textContent = room ? "# " + name : name;
     var pill = $("tpill"); pill.hidden = false; pill.className = "pill " + (room ? "room" : "pm"); pill.textContent = room ? "Room" : "Private";
     $("ts").textContent = room ? "Everyone in this room sees your messages" : (people.indexOf(name) >= 0 ? "Online. Only you two can read this" : "Offline. Messages cannot be delivered right now");
-    $("msg").disabled = false; fit(); $("clip").disabled = false; $("msg").focus();
+    var hic = $("hic"); hic.hidden = false; hic.textContent = ""; hic.className = "hic" + (room ? "" : " pm");
+    if (room) { hic.textContent = "#"; } else { hic.className = "hic av"; hic.style.background = color(name); hic.textContent = (name[0] || "?").toUpperCase(); }
+    $("msg").disabled = false; fit(); $("clip").disabled = false; $("emoBtn").disabled = false; $("msg").focus();
     drawNav(); drawThread(true); loadMembers();
   }
 
@@ -477,50 +512,54 @@
   function fmtBytes(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(2) + " MB"; }
   function spark() {
     var NS = "http://www.w3.org/2000/svg", svg = document.createElementNS(NS, "svg"), mx = Math.max.apply(null, bpsHist.concat([1000]));
-    svg.setAttribute("viewBox", "0 0 260 46"); svg.setAttribute("class", "spark"); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "Your recent traffic");
-    var pts = bpsHist.map(function (v, i) { return (i / 39 * 260).toFixed(1) + "," + (42 - v / mx * 36).toFixed(1); });
-    if (pts.length > 1) { var pl = document.createElementNS(NS, "polyline"); pl.setAttribute("points", pts.join(" ")); pl.setAttribute("fill", "none"); pl.setAttribute("stroke", "var(--accent)"); pl.setAttribute("stroke-width", "2"); svg.appendChild(pl); }
+    svg.setAttribute("viewBox", "0 0 260 46"); var bl = document.createElementNS(NS, "line"); bl.setAttribute("x1", "0"); bl.setAttribute("x2", "260"); bl.setAttribute("y1", "43"); bl.setAttribute("y2", "43"); bl.setAttribute("stroke", "var(--rule)"); svg.appendChild(bl); svg.setAttribute("class", "spark"); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "Your recent traffic");
+    var off = 40 - bpsHist.length, pts = bpsHist.map(function (v, i) { return ((off + i) / 39 * 260).toFixed(1) + "," + (42 - v / mx * 36).toFixed(1); });
+    if (pts.length > 1) { var ar = document.createElementNS(NS, "polygon"); ar.setAttribute("points", (off / 39 * 260).toFixed(1) + ",46 " + pts.join(" ") + " 260,46"); ar.setAttribute("fill", "var(--accent)"); ar.setAttribute("fill-opacity", ".14"); svg.appendChild(ar); var pl = document.createElementNS(NS, "polyline"); pl.setAttribute("points", pts.join(" ")); pl.setAttribute("fill", "none"); pl.setAttribute("stroke", "var(--accent)"); pl.setAttribute("stroke-width", "2"); svg.appendChild(pl); }
     return svg;
   }
   var toastT = null;
   function toast(t) { var e = $("toast"); if (!e) { e = el("div"); e.id = "toast"; e.setAttribute("role", "status"); document.body.appendChild(e); } e.textContent = t; e.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { e.hidden = true; }, 4000); }
   function chip(text, cls) { return el("span", "chip " + (cls || ""), text); }
   function drawNet(n) {
-    var box = $("net"), alert = $("netAlert"), nc = $("netchip"); box.textContent = ""; alert.hidden = true; nc.hidden = true;
+    var box = $("net"), alert = $("netAlert"), nc = $("netchip"); box.textContent = ""; box.className = "net"; alert.hidden = true; nc.hidden = true;
     if (!n || !n.ok || !n.available) {
       box.appendChild(el("p", "note", "The controller is not reachable from here, so the network details are hidden. Chat still works."));
       return;
     }
-    nc.hidden = false;
-    nc.className = "pill netchip" + (n.blocked ? " bad" : (n.throttled || n.heavy) ? " warn" : "");
-    nc.textContent = n.mode === "baseline" ? "Baseline network" : n.blocked ? "Blocked" : n.throttled ? "Throttled" : n.heavy ? "Rate limited" : n.vip ? "VIP path" : n.allowed ? "Allowed" : "Not registered";
-    var path = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    path.setAttribute("viewBox", "0 0 260 64");
-    var hot = n.blocked ? "var(--bad)" : (n.throttled || n.heavy) ? "var(--warn)" : "var(--accent)";
-    path.innerHTML = '<g fill="none" stroke="' + hot + '" stroke-width="3"><path d="M52 40H108"/><path d="M152 40H208"/></g>' +
-      '<g font-size="11" text-anchor="middle" fill="var(--ink)"><rect x="6" y="26" width="46" height="28" rx="8" fill="var(--accent-soft)"/><text x="29" y="44">You</text>' +
-      '<rect x="108" y="22" width="44" height="36" rx="9" fill="' + hot + '"/><text x="130" y="44" fill="#fff">Switch</text>' +
-      '<rect x="208" y="26" width="46" height="28" rx="8" fill="var(--accent-soft)"/><text x="231" y="44">Server</text></g>';
+    var state = n.blocked ? "bad" : (n.throttled || n.heavy) ? "warn" : "";
+    box.className = "net " + state;
+    nc.hidden = false; nc.className = "pill netchip" + (state ? " " + state : "");
+    var label = n.mode === "baseline" ? "Baseline network" : n.blocked ? "Blocked" : n.throttled ? "Throttled" : n.heavy ? "Rate limited" : n.vip ? "VIP path" : n.allowed ? "Allowed" : "Not registered";
+    nc.textContent = label;
+    var sub = n.mode === "baseline" ? "Plain forwarding, no policy" : n.blocked ? "Everything from your host is dropped" : n.throttled || n.heavy ? "Moved to the slow queue" : n.vip ? "Fast queue for room chat" : n.allowed ? "Your host has a pass rule" : "The switch drops chat traffic until you sign in";
+    var icon = n.blocked ? '<path d="M5.6 5.6l12.8 12.8M12 3a9 9 0 100 18 9 9 0 000-18z"/>' : state ? '<path d="M12 8v5M12 16.5h.01M10.3 3.9L2.6 17.2A2 2 0 004.3 20h15.4a2 2 0 001.7-2.8L13.7 3.9a2 2 0 00-3.4 0z"/>' : '<path d="M12 3l8 3v6c0 4-3.5 7-8 9-4.5-2-8-5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>';
+    var st = el("div", "stat"); st.innerHTML = '<span class="big"><svg viewBox="0 0 24 24" aria-hidden="true">' + icon + "</svg></span>"; var tx = el("div"); tx.appendChild(el("b", "", label)); tx.appendChild(el("span", "", sub)); st.appendChild(tx); box.appendChild(st);
+    var path = document.createElementNS("http://www.w3.org/2000/svg", "svg"); path.setAttribute("viewBox", "0 0 260 52"); path.setAttribute("class", "pathsvg");
+    path.innerHTML = '<g fill="none"><path class="' + (n.blocked ? "" : "fl") + '" d="M54 26H104"/><path class="' + (n.blocked ? "" : "fl") + '" d="M156 26H206"/></g>' + (n.blocked ? '<path d="M118 14l24 24M142 14l-24 24" stroke="var(--bad)" stroke-width="3" stroke-linecap="round"/>' : "") +
+      '<g font-size="11" text-anchor="middle" fill="var(--ink)"><rect x="4" y="12" width="50" height="28" rx="9" fill="var(--accent-soft)" stroke="var(--rule)"/><text x="29" y="30">You</text>' +
+      '<rect x="104" y="8" width="52" height="36" rx="10" fill="var(--st)" fill-opacity=".9"/><text x="130" y="30" fill="#04202a" font-weight="700">Switch</text>' +
+      '<rect x="206" y="12" width="50" height="28" rx="9" fill="var(--accent-soft)" stroke="var(--rule)"/><text x="231" y="30">Server</text></g>';
     box.appendChild(path);
-    var r1 = el("div", "row"); r1.appendChild(el("span", "", "Your host")); r1.appendChild(el("span", "", n.ip || "unknown")); box.appendChild(r1);
-    var r2 = el("div", "row"); r2.appendChild(el("span", "", "Policy"));
-    var c = el("span");
-    if (n.mode === "baseline") { c.appendChild(chip("Baseline: no policy", "off")); }
+    var tiles = el("div", "tiles"), pct = Math.round((n.util || 0) * 100);
+    var tile = function (k, v, extra) { var t = el("div", "tile"); t.appendChild(el("span", "", k)); t.appendChild(el("b", "", v)); if (extra) { t.appendChild(extra); } return t; };
+    var mt = el("div", "meter"), mi = el("i", n.congested ? "hot" : ""); mi.style.width = Math.min(100, pct) + "%"; mt.appendChild(mi);
+    tiles.appendChild(tile("Server link", pct + "%" + (n.congested ? " busy" : ""), mt));
+    tiles.appendChild(tile("You send", fmtBps(n.bps || 0)));
+    tiles.appendChild(tile("Sent so far", n.bytes ? fmtBytes(n.bytes) : "0 B"));
+    tiles.appendChild(tile("Your host", n.ip || "unknown"));
+    box.appendChild(tiles);
+    var chips = el("div", "chips");
+    if (n.mode === "baseline") { chips.appendChild(chip("Baseline: no policy", "off")); }
+    else if (n.blocked) { chips.appendChild(chip("Blocked", "bad")); }
     else {
-      if (n.blocked) { c.appendChild(chip("Blocked", "bad")); }
-      else {
-        c.appendChild(chip(n.allowed ? "Allowed" : "Not registered", n.allowed ? "" : "bad"));
-        if (n.vip) { c.appendChild(chip("VIP queue", "vip")); }
-        if (n.throttled) { c.appendChild(chip("Throttled", "warn")); }
-        if (n.heavy) { c.appendChild(chip("Rate limited", "warn")); }
-      }
+      chips.appendChild(chip(n.allowed ? "Allowed" : "Not registered", n.allowed ? "" : "bad"));
+      if (n.vip) { chips.appendChild(chip("VIP queue", "vip")); }
+      if (n.throttled) { chips.appendChild(chip("Throttled", "warn")); }
+      if (n.heavy) { chips.appendChild(chip("Rate limited", "warn")); }
     }
-    r2.appendChild(c); box.appendChild(r2);
-    var r3 = el("div", "row"); r3.appendChild(el("span", "", "Server link")); r3.appendChild(el("span", "", Math.round((n.util || 0) * 100) + "%" + (n.congested ? ", congested" : ""))); box.appendChild(r3);
-    var r4 = el("div", "row"); r4.appendChild(el("span", "", "You are sending")); r4.appendChild(el("span", "", fmtBps(n.bps || 0))); box.appendChild(r4);
-    if (n.bytes) { var r5 = el("div", "row"); r5.appendChild(el("span", "", "Sent so far")); r5.appendChild(el("span", "", fmtBytes(n.bytes))); box.appendChild(r5); }
+    box.appendChild(chips);
     bpsHist.push(n.bps || 0); if (bpsHist.length > 40) { bpsHist.shift(); }
-    box.appendChild(spark());
+    box.appendChild(spark()); box.appendChild(el("p", "note", "Your traffic over the last two minutes"));
     var sig = [n.blocked, n.throttled, n.heavy, n.allowed].join();
     if (lastSig !== null && sig !== lastSig) { toast(n.blocked ? "The network blocked your host" : n.throttled ? "The network is throttling your host" : n.heavy ? "The network is rate limiting your host" : "Your host's policy changed"); }
     lastSig = sig;
@@ -528,7 +567,7 @@
     var how = n.blocked ? "The network is dropping everything from this host for a while (too many failed sign-ins)."
       : n.throttled ? "Too many messages too fast. The network moved this host to the slow bulk queue."
       : n.vip ? "Room chat travels in the fast queue because this host is on the VIP list."
-      : "Room chat uses the normal queue. Private messages use the fast queue.";
+      : "Room chat uses the normal queue. Private messages use the fast queue. Files use the bulk queue.";
     box.appendChild(el("p", "note", how));
     if (n.blocked || n.throttled) { alert.textContent = n.blocked ? "Your host is blocked by the network. Messages will not get through until the block expires." : "Your host is being throttled for sending too fast. Slow down and it will clear."; alert.className = "alert" + (n.blocked ? " bad" : ""); alert.hidden = false; }
   }
@@ -619,9 +658,12 @@
   $("msg").addEventListener("input", fit);
   EMOJI.forEach(function (x) {
     var b = el("button", "emo", x); b.type = "button"; b.setAttribute("aria-label", "Insert " + x);
-    b.onclick = function () { var t = $("msg"); if (!t.disabled) { t.value += x; t.focus(); fit(); } };
-    $("emos").insertBefore(b, $("emos").querySelector(".hint"));
+    b.onclick = function () { var t = $("msg"); if (!t.disabled) { t.value += x; t.focus(); fit(); } $("emopop").hidden = true; $("emoBtn").setAttribute("aria-expanded", "false"); };
+    $("emopop").appendChild(b);
   });
+  $("emoBtn").onclick = function (e) { e.stopPropagation(); var pop = $("emopop"); pop.hidden = !pop.hidden; $("emoBtn").setAttribute("aria-expanded", pop.hidden ? "false" : "true"); };
+  document.addEventListener("click", function (e) { if (!$("emopop").hidden && !$("emopop").contains(e.target)) { $("emopop").hidden = true; $("emoBtn").setAttribute("aria-expanded", "false"); } });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") { $("emopop").hidden = true; } });
   $("thread").addEventListener("scroll", function () { var t = $("thread"); if (t.scrollHeight - t.scrollTop - t.clientHeight < 80) { $("jump").hidden = true; } });
   $("jump").onclick = function () { var t = $("thread"); t.scrollTop = t.scrollHeight; $("jump").hidden = true; };
   $("clip").onclick = function () { $("pick").click(); };
