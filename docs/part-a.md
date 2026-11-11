@@ -1,6 +1,7 @@
 # Part A: Chat application, load generator and evaluation tools
 
 Files: `chat/server.py`, `chat/client.py`, `chat/spam.py`, `chat/bot.py`, `eval/analyze.py`, `eval/plot.py`.
+Also touched with small changes (history, reconnect, member list): `chat/web_gateway.py` and `chat/web/index.html`.
 Shared, frozen files used but not changed: `chat/protocol.py` (framing), `chat/notifier.py` (events), `common/constants.py`.
 
 ## 1. Server design (`chat/server.py`)
@@ -8,7 +9,7 @@ Shared, frozen files used but not changed: `chat/protocol.py` (framing), `chat/n
 - **Ports as traffic classes:** the server listens on 5000 (control), 5001 (room chat), 5002 (private messages) and 5003 (bulk). A client uses one TCP connection per port, so the network can classify traffic by TCP destination port.
 - **Threads:** one listener thread per port, one thread per client connection, and one background thread (`spam_watch`) that unflags quiet users.
 - **Shared state:** users, tokens, online users, rooms and the attached connections of each port live in dictionaries protected by one lock. Each connection also has its own send lock, so two threads pushing messages to the same client cannot interleave their frames.
-- **Login flow:** `REGISTER` or `LOGIN` on port 5000 returns a token. Connections to 5001, 5002 and 5003 send `ATTACH` with that token before anything else. When the 5000 connection closes, the user's token, room memberships and attached connections are removed and a `disconnect` event is sent.
+- **Login flow:** `REGISTER` or `LOGIN` on port 5000 returns a token. Connections to 5001, 5002 and 5003 send `ATTACH` with that token before anything else. Only one session per account is allowed: a second `LOGIN` for a user who is already online is refused with `ALREADY_ONLINE` and the first session is left untouched. When the 5000 connection closes, the user's token, room memberships and attached connections are removed and a `disconnect` event is sent.
 - **Robustness:** a bad frame closes only that connection, errors return an `ERR` code from the contract, and every connection handler cleans up in a `finally` block, so one bad client cannot crash the server.
 - **Limits:** names are `[A-Za-z0-9_]{1,16}`, frames are at most 64 KiB, bulk size is 1 to 60000, and shared files are 1 byte to 5 MiB (see "File sharing" in `docs/interfaces.md`). Passwords are stored as salted PBKDF2-SHA256 hashes; start the server with `--db accounts.json` to keep accounts between restarts.
 
@@ -18,12 +19,12 @@ Length-prefixed JSON (4-byte big-endian length, then a UTF-8 object), implemente
 
 | Port | Requests | Replies and pushes |
 |---|---|---|
-| 5000 | `REGISTER`, `LOGIN`, `JOIN`, `LEAVE`, `LIST` | `OK` with `token`, `members` or `items`, or `ERR` with a code |
+| 5000 | `REGISTER`, `LOGIN`, `JOIN`, `LEAVE`, `LIST` (`rooms`, `users` or `members` of a room) | `OK` with `token`, `members` and `history` (for `JOIN`) or `items`, or `ERR` with a code |
 | 5001 | `ATTACH`, `MSG_ROOM` | push `MSG` (kind `room`) to every other member of the room |
 | 5002 | `ATTACH`, `MSG_PM` | push `MSG` (kind `pm`) to the recipient |
 | 5003 | `ATTACH`, `BULK{size}` | `OK`, then one `BULK_DATA` frame of `size` bytes |
 
-Error codes: `BAD_REQUEST`, `USER_EXISTS`, `BAD_CREDENTIALS`, `NOT_LOGGED_IN`, `NO_SUCH_ROOM`, `NOT_IN_ROOM`, `NO_SUCH_USER`, `OFFLINE`, `BAD_TOKEN`.
+Error codes: `BAD_REQUEST`, `USER_EXISTS`, `BAD_CREDENTIALS`, `NOT_LOGGED_IN`, `NO_SUCH_ROOM`, `NOT_IN_ROOM`, `NO_SUCH_USER`, `OFFLINE`, `BAD_TOKEN`, `ALREADY_ONLINE`.
 
 ## 3. Events sent to the SDN controller
 
@@ -53,6 +54,14 @@ Only failed `LOGIN` attempts count. After 5 consecutive `BAD_CREDENTIALS` from o
 
 `python3 chat/client.py --server 10.0.0.1 --user alice` registers (or logs in if the name exists) and opens the three connections. Commands: `/register`, `/login`, `/join`, `/leave`, `/room`, `/msg`, `/pm`, `/sendroom <room> <file>`, `/sendpm <user> <file>`, `/get <file id> [folder]`, `/list users|rooms`, `/help`, `/quit`. Background threads print incoming messages while the main thread reads the keyboard. Anything typed without `/` goes to the current room.
 
+## 6a. Later additions: history, member list, one session, reconnect
+
+- **Room history:** the server keeps the last 20 messages of each room (size-capped, in memory only). `JOIN` returns them in `history`, oldest first, so a user who joins late sees the recent conversation. A new room and private messages have no history.
+- **Member list:** `LIST` with `what="members"` and a `room` returns the sorted names in that room, or `NO_SUCH_ROOM`. The web chat shows it as "In this room" and refreshes it as people join and leave.
+- **One session per account:** see the login flow in section 1. This fixed a bug where signing out in one browser tab logged the same user out of the other tabs.
+- **Auto-reconnect (web chat):** if the connection to the server is lost, the page shows a banner, retries login every 3 s for up to 30 tries, then re-joins the user's rooms and shows "Reconnected". Sending is paused while reconnecting.
+- These changes to `JOIN`, `LIST` and the `ALREADY_ONLINE` code are recorded in `docs/interfaces.md`.
+
 ## 7. Load generator (`chat/bot.py`)
 
 ```
@@ -80,8 +89,12 @@ On the Mininet network, `make server` starts the server on h1 (see the README's 
 
 ## 10. Testing done
 
+Automated: `tests/test_chat_server.py` holds about 50 black-box pytest tests. It starts the real server with a fake controller and covers registration, login, rooms, room and private messages, robustness (bad frames), 20 concurrent clients, the bulk port, spam `flag` and `unflag` events, the `block` event, deletion of empty rooms, the one-session rule, room history and the member list. Run it with `PYTHONPATH=. pytest tests/test_chat_server.py`. The web chat features were also checked in a real browser.
+
+Manual runs before the automated tests existed:
+
 Scripted tests of register, join, room message and the duplicate-login error; the bulk port (valid and too-large sizes); a 25-message flood (one `flag`, then one `unflag` about 30 s later); five wrong passwords (one `block` event); and a 5-bot load run (100 messages, 400 deliveries, 0 errors, p50 about 0.9 ms on localhost).
 
 ## 11. Known limitations
 
-State is in memory, so users are lost on restart unless the server is started with `--db accounts.json` (accounts only; rooms, messages and shared files are never saved). Passwords are stored as salted PBKDF2-SHA256 hashes. Tokens never expire, shared files are kept in memory only (at most 50 files and 64 MB), and there is no encryption on the wire. The server is one process with one thread per connection, which is fine for 100 bots but would not scale to thousands.
+Room history keeps only the last 20 messages per room and is lost on restart. State is in memory, so users are lost on restart unless the server is started with `--db accounts.json` (accounts only; rooms, messages and shared files are never saved). Passwords are stored as salted PBKDF2-SHA256 hashes. Tokens never expire, shared files are kept in memory only (at most 50 files and 64 MB), and there is no encryption on the wire. The server is one process with one thread per connection, which is fine for 100 bots but would not scale to thousands.
