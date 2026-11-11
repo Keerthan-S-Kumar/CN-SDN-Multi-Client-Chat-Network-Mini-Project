@@ -35,7 +35,7 @@ experiments:
 	sudo env PYTHONPATH=. python3 eval/run_experiments.py
 
 report:
-	python3 eval/analyze.py && python3 eval/plot.py
+	python3 eval/analyze.py && python3 eval/plot.py && python3 eval/extra_metrics.py && python3 eval/plot_extra.py
 
 test:
 	$(PY) -m unittest controller.test_logic -v

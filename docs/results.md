@@ -51,6 +51,9 @@ Per run at 50 and 100 bots (p50 / p95 in ms, loss %):
 ![Scalability](../eval/results/scalability.png)
 ![Link failure timeline](../eval/results/linkfail_timeline.png)
 ![Congestion CDF](../eval/results/congestion_cdf.png)
+![p95 latency by scenario, log scale](../eval/results/p95_all_scenarios.png)
+![Latency over time with controller reactions](../eval/results/latency_over_time.png)
+![Controller reaction times](../eval/results/reaction_times.png)
 
 ## What the results show
 
