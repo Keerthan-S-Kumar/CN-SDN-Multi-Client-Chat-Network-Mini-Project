@@ -21,6 +21,8 @@ All numbers come from `eval/results/summary.csv` (made by `make report` from the
 | congested | baseline | 164.8 | 270.4 | 376.9 | 0.0 |
 | flood | sdn | 3.60 | 24.2 | 49.3 | 0.0 |
 | flood | baseline | 2.06 | 17.2 | 36.6 | 0.0 |
+| floodbig | sdn | 4.62 | 27.4 | 55.1 | 0.0 |
+| floodbig | baseline | 6.28 | 70.8 | 141.3 | 0.0 |
 | linkfail | sdn | 4.25 | 35.0 | 68.1 | 0.0 |
 | linkfail | baseline | 2.47 | 11355.0 | 13155.6 | 0.0 |
 
@@ -56,6 +58,7 @@ Per run at 50 and 100 bots (p50 / p95 in ms, loss %):
 - **Congestion:** a 12 Mbps UDP stream into the 10 Mbps bottleneck fills the link. In baseline every message queues behind it (median 165 ms). With SDN the chat traffic sits in its own queue and the heavy stream is limited by a meter, so the median stays at 3.5 ms: about 48 times lower at p50, 14 times at p95 and 9 times at p99.
 - **Link failure:** the link s1-s2 goes down at 10 s and returns at 20 s. In baseline the switches keep sending into the dead link, so messages wait until it returns and the tail latency reaches about 11 s. With SDN the controller sees the port go down, deletes the routes and relearns them over the other path, so p95 stays at 35 ms. No messages are lost in either mode because TCP retransmits; the cost is delay.
 - **Flood:** one spammer sending 200 messages per second on its own host. SDN did not improve latency here; baseline was slightly faster. A likely reason (not tested separately): spam messages are tiny, so their bandwidth is small next to the 10 Mbps bottleneck and the cost lands on the chat server's CPU, which throttling at the switch cannot relieve. The SDN run also pays a small cost to flag the user and install the throttle rules.
+- **Flood with large messages (`floodbig`):** to test that explanation, the spammer sends 4000-byte messages at 200 per second (6.4 Mbit/s towards the 10 Mbit/s bottleneck, `eval/bigspam.py`) instead of 4 bytes. Now SDN is better: p95 is 27.4 ± 4.2 ms against 70.8 ± 57.9 ms in baseline, and p99 55 ms against 141 ms. In the three baseline runs the spammer sent its 24 MB in 30 s (6.40 Mbit/s each time). In every SDN run the controller logged `throttle_on` for the spammer's host and the spammer was still sending when the run ended (one `bot_timeout` per run), which is what a 100 kbit/s throttle would cause; we did not measure its actual rate. With three runs and a wide baseline spread the direction is clear but the size of the gain is not.
 - **Scalability:** up to 25 bots the two modes are the same. At 50 bots SDN stays steady (p95 40 to 70 ms in all three runs). Baseline matches it in two runs (p95 about 85 ms) and has one bad run (p95 2.6 s, 0.75% loss), which is what makes its mean look much worse; we treat that as an outlier, not as an SDN advantage. At 100 bots both modes are overloaded: median latency is seconds and 20 to 58% of messages are lost in most runs, and the runs differ a lot (baseline run 3 was fine, with a median of 295 ms and 1% loss). All three SDN runs were bad at 100 bots, but with three runs and this spread we do not claim SDN is worse. A likely cause, not tested, is the CPU of the VM and the single-process Python chat server, which sends every message to 99 receivers; that limit is in the server and the VM, not in the network. On this VM the setup saturates somewhere between 50 and 100 bots.
 
 ## Limits
