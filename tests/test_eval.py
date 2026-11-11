@@ -71,6 +71,13 @@ class PlanTest(unittest.TestCase):
         self.assertEqual(p["bots"]["h3"], (5, False))
         self.assertEqual([h for h, (_, spam) in p["bots"].items() if spam], ["h4"])
 
+    def test_floodbig_sends_large_spam_from_h4_and_flood_does_not(self):
+        big, small = R.make_plan("floodbig", users=10), R.make_plan("flood", users=10)
+        self.assertEqual(big["spam_size"], R.BIG_SPAM_BYTES)
+        self.assertGreater(R.BIG_SPAM_BYTES, 1000)
+        self.assertNotIn("spam_size", small)
+        self.assertEqual(big["bots"], small["bots"])
+
     def test_scale_runs_use_n_bots_and_lower_rates_for_big_runs(self):
         for n in (5, 10, 25, 50, 100):
             p = R.make_plan("scale%d" % n)

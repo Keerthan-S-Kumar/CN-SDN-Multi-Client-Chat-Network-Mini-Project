@@ -263,6 +263,7 @@ make reproduce        # unit tests, chat tests, core experiments (3 runs per mod
 sudo env PYTHONPATH=. python3 eval/run_experiments.py --core --runs 3
 sudo env PYTHONPATH=. python3 eval/run_experiments.py --only scale5,scale10,scale25 --runs 1
 sudo env PYTHONPATH=. python3 eval/run_experiments.py --only scale50,scale100 --runs 3
+sudo env PYTHONPATH=. python3 eval/run_experiments.py --only floodbig --runs 3
 make report
 ```
 
