@@ -1,5 +1,10 @@
 # D2 live demo script (about 8 minutes)
 
+> **Shortcut.** `tools/demo.sh live` (or `make demo-live`) cleans up, starts the controller and opens the triangle network;
+> at the `mininet>` prompt, `source tools/demo/all.cli` then runs every step below in order with headings. `tools/demo.sh auto`
+> (or `make demo-check`) runs the checks fully automatically with PASS or FAIL. The manual steps below remain for talking
+> through each part.
+
 Setup, same order as D1 (cleanup, then Ryu, then topology):
 - T3: `sudo -v`, then `sudo mn -c`
 - T1: `cd ~/CN-SDN-Multi-Client-Chat-Network-Mini-Project`, then

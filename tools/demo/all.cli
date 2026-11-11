@@ -1,0 +1,40 @@
+sh echo "=== 1/7 Connectivity (expect 0% dropped) ==="
+pingall
+sh echo "=== 2/7 Start the chat server on h1 ==="
+h1 PYTHONPATH=. python3 chat/server.py --host 10.0.0.1 > /tmp/server.log 2>&1 &
+sh sleep 2
+sh echo "=== 3/7 The gate: unregistered h2 reaches port 5000 but not 5001 ==="
+h2 python3 -c "import socket; s=socket.socket(); s.settimeout(2); print('port 5000 (control):', 'OPEN' if s.connect_ex(('10.0.0.1',5000))==0 else 'BLOCKED')"
+h2 python3 -c "import socket; s=socket.socket(); s.settimeout(2); print('port 5001 (room chat):', 'OPEN' if s.connect_ex(('10.0.0.1',5001))==0 else 'BLOCKED by the switch')"
+sh echo "=== 4/7 Register bob on h2: the allow rules appear, the gate opens ==="
+h2 sh -c "(printf '/join lobby\n'; sleep 150) | PYTHONPATH=. python3 chat/client.py --server 10.0.0.1 --user bob" > /tmp/bob.out 2>&1 &
+sh sleep 3
+sh ovs-ofctl -O OpenFlow13 dump-flows s1 table=0 | grep 10.0.0.2
+h2 python3 -c "import socket; s=socket.socket(); s.settimeout(2); print('port 5001 now:', 'OPEN' if s.connect_ex(('10.0.0.1',5001))==0 else 'BLOCKED')"
+sh echo "=== 5/7 Block rules after repeated bad logins (4 rules at priority 400) ==="
+sh PYTHONPATH=. python3 tools/post_event.py block "" 10.0.0.4 --reason bad_login
+sh ovs-ofctl -O OpenFlow13 dump-flows s1 table=0 | grep priority=400
+sh echo "=== 6/7 Congestion: 12 Mbps UDP into the 10 Mbps link while 3 bots chat ==="
+h1 iperf -s -u -p 5201 > /dev/null 2>&1 &
+h3 iperf -c 10.0.0.1 -u -b 12M -t 30 -p 5201 > /dev/null 2>&1 &
+sh sleep 3
+h2 python3 chat/bot.py --users 3 --prefix demo --duration 10 --out /tmp/demo.csv
+sh ovs-ofctl -O OpenFlow13 dump-meters s1
+sh ovs-ofctl -O OpenFlow13 queue-stats s1
+sh echo "--- file sharing under the same load (bulk queue) ---"
+h2 PYTHONPATH=. python3 eval/file_transfer.py --server 10.0.0.1 --mb 3
+sh sleep 12
+sh echo "=== 7/7 Link failure and reroute ==="
+h2 ping -c 100 -i 0.2 10.0.0.3 > /tmp/ping.txt &
+sh sleep 2
+sh echo "route to h3 on s2 BEFORE (expect output:3, the direct link):"
+sh ovs-ofctl -O OpenFlow13 dump-flows s2 table=1 | grep 00:00:00:00:00:03
+link s2 s3 down
+sh sleep 2
+sh echo "route to h3 on s2 AFTER (expect output:2, the detour via s1):"
+sh ovs-ofctl -O OpenFlow13 dump-flows s2 table=1 | grep 00:00:00:00:00:03
+sh sleep 3
+link s2 s3 up
+sh sleep 16
+sh tail -3 /tmp/ping.txt
+sh echo "=== Done. Dashboard: http://127.0.0.1:8080/ui  (Demo guide tab shows the steps ticked) ==="
