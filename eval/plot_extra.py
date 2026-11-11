@@ -29,7 +29,7 @@ from common.constants import MODES, RESULTS_DIR  # noqa: E402
 
 COLORS = {"sdn": "#1f77b4", "baseline": "#ff7f0e"}
 INK, MUTED, GRID = "#222222", "#666666", "#dddddd"
-EVENTS = {"congestion_on": "congestion response on", "throttle_on": "spammer throttled", "link_down": "link down"}
+EVENTS = {"congestion_on": "congestion response on", "throttle_on": "spammer throttled"}
 MIN_SAMPLES = 5          # a second with fewer deliveries than this is not plotted
 
 
@@ -125,7 +125,7 @@ def latency_over_time(results, out):
         return False
     fig, axes = plt.subplots(len(scenarios), 1, figsize=(10, 3.1 * len(scenarios)), squeeze=False)
     for ax, sc in zip(axes[:, 0], scenarios):
-        top = 0.0
+        top, xmax = 0.0, 1
         for mode in MODES:
             files = analyze.run_files(results, mode, sc)
             if not files:
@@ -135,11 +135,12 @@ def latency_over_time(results, out):
                 continue
             ax.plot([p[0] for p in pts], [p[1] for p in pts], color=COLORS[mode], linewidth=1.6, label=mode)
             top = max(top, max(p[1] for p in pts))
+            xmax = max(xmax, pts[-1][0])
             if mode == "sdn":
                 seen = set()
                 for e in analyze.read_controller_log(files[0]):
                     kind, x = e.get("kind"), e.get("t", 0) - t0
-                    if kind in EVENTS and kind not in seen and x >= 0:
+                    if kind in EVENTS and kind not in seen and 0 <= x <= xmax + 1:
                         seen.add(kind)
                         ax.axvline(x, color=MUTED, linestyle="--", linewidth=1)
                         ax.text(x + 0.3, 0.97, EVENTS[kind], transform=ax.get_xaxis_transform(),
@@ -148,6 +149,7 @@ def latency_over_time(results, out):
         ax.set_title("%s (run 1)" % sc, loc="left", color=INK, fontsize=10)
         ax.set_ylabel("p95 latency (ms)")
         ax.set_ylim(0, top * 1.15 if top else 1)
+        ax.set_xlim(-0.5, xmax + 0.5)
         style(ax)
         ax.legend(loc="lower right", bbox_to_anchor=(1.0, 1.0), ncol=2, frameon=False)
     axes[-1, 0].set_xlabel("time since the first message (s)")
