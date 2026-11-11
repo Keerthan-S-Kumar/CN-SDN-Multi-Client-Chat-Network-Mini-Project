@@ -10,6 +10,7 @@ Four layers: unit tests, a live check of the controller, scenario runs on the tr
 | Web gateway and UI API | `tests/test_web_gateway.py`, `tests/test_ui_api.py` | the browser chat gateway and the controller's dashboard API |
 | Controller logic | `controller/test_logic.py` | gating, queues, throttling, rerouting and the monitor, against the controller's own functions |
 | Topology | `tests/test_topology.py`, `tests/test_triangle.py` | host addresses, port numbers, links, switch IDs and the QoS queues (need root and Mininet) |
+| Evaluation code | `tests/test_eval.py` | the experiment plan, run merging, the statistics in `analyze.py`, failover and congestion reaction times, and the demo-check parsers (no Mininet needed) |
 
 Latest results (the chat, gateway and dashboard tests also run on every push through GitHub Actions):
 
@@ -26,6 +27,8 @@ File sharing is covered by the same suites: `tests/test_chat_server.py` (upload 
 ## 2. Live check of the controller
 
 `controller/verify_live.sh` runs against a live Mininet. It posts events to the controller and checks the OpenFlow rules that appear and disappear on every switch: the static gate (3 drop rules and 1 control rule), allow rules after register, the VIP rule for a VIP room, throttle rules after a flag, 4 block rules after a block event, and removal of all of them afterwards.
+
+`tests/demo_auto.py` (run it with `make demo-check`; needs root and Mininet) starts the controller and the triangle itself and checks the demo scenarios in about 2 minutes: no loss on pingall, the gate blocks an unregistered host, the route moves to the detour when s2-s3 goes down, chat latency and queues under a 12 Mbps flood, the block rules, and a 1 MB file transfer. Latest run: 13 of 13 checks passed.
 
 ## 3. Scenario runs
 
@@ -49,7 +52,7 @@ File sharing is covered by the same suites: `tests/test_chat_server.py` (upload 
 | Disconnect closes the gate | the user disconnects | the allow rules are removed and the drop rules remain |
 | Brute force | repeated bad logins from one host | the server sends a `block` event and the controller installs 4 drop rules (ports 5000 to 5003) |
 
-The first three steps are in `docs/demo-d1.md`; the block rules are also checked by `controller/verify_live.sh`.
+The block rules are also checked by `controller/verify_live.sh`.
 
 ## Run everything
 
@@ -59,6 +62,6 @@ The first three steps are in `docs/demo-d1.md`; the block rules are also checked
 
 ## Known gaps
 
-- At 100 bots both modes are overloaded and the runs vary widely, so no conclusion is drawn there; scale 5, 10 and 25 have one run per mode.
+- At 100 bots both modes are overloaded and the runs vary widely, so no conclusion is drawn there.
 - The flood scenario shows no latency gain from throttling; see `docs/results.md`.
 - Rules are per host IP, so one flagged user throttles every user on the same host.

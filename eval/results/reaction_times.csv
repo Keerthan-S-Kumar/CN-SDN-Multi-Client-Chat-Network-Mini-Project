@@ -1,0 +1,5 @@
+scenario,what,runs,mean_ms,std_ms
+linkfail,link down seen by the controller,3,5.8,0.8
+linkfail,new routes installed and confirmed,3,13.5,0.9
+linkfail,"failover, link cut to routes confirmed",3,16.0,4.9
+congested,iperf start to congestion response on,3,8856.5,5547.5
