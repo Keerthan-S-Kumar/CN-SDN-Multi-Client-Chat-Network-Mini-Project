@@ -263,6 +263,7 @@ make reproduce        # unit tests, chat tests, core experiments (3 runs per mod
 sudo env PYTHONPATH=. python3 eval/run_experiments.py --core --runs 3
 sudo env PYTHONPATH=. python3 eval/run_experiments.py --only scale5,scale10,scale25 --runs 1
 sudo env PYTHONPATH=. python3 eval/run_experiments.py --only scale50,scale100 --runs 3
+sudo env PYTHONPATH=. python3 eval/run_experiments.py --only floodbig --runs 3
 make report
 ```
 
@@ -278,7 +279,7 @@ script is [`docs/demo-d2.md`](docs/demo-d2.md).
 Headline results (3 runs per mode; details and caveats in `docs/results.md`): under a congested bottleneck the
 SDN controller keeps median message latency at about 3.5 ms where the static baseline reaches about 165 ms.
 After a link failure SDN keeps p95 latency at about 35 ms while the baseline's tail reaches about 11 s. The
-results also show limits: SDN gave no latency gain under a one-host flood, and at 100 bots both modes are
+results also show limits: SDN gave no latency gain under a flood of tiny messages (it did under a flood of large messages, see `docs/results.md`), and at 100 bots both modes are
 overloaded (the cause is probably the VM and the single-process chat server, which we did not test separately).
 
 ## Status and known limits

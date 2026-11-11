@@ -39,6 +39,7 @@ File sharing is covered by the same suites: `tests/test_chat_server.py` (upload 
 | Congestion | a 12 Mbps UDP stream into the 10 Mbps bottleneck | median latency 3.5 ms (sdn) against 165 ms (baseline) |
 | Link failure | link s1-s2 down at 10 s, up at 20 s | p95 35 ms (sdn) against 11,355 ms (baseline); no loss |
 | Flood | one spammer at 200 messages per second | no improvement in latency (see results doc) |
+| Flood, large messages | one spammer sending 4000-byte messages, 200 per second | p95 27 ms (sdn) against 71 ms (baseline) |
 | Scale | 5 to 100 bots | same up to 50 bots; both modes overloaded at 100 bots, with very variable runs |
 | Idle | overhead of the controller | equal to baseline within noise |
 

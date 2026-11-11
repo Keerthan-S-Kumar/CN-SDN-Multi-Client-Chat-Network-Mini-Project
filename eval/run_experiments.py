@@ -37,6 +37,7 @@ CORE = ("idle", "congested", "flood", "linkfail")
 ROOM = "general"
 SCALE_RATE = {5: 2.0, 10: 2.0, 25: 2.0, 50: 1.0, 100: 0.5}   # msgs/s per bot; lower for the big runs so the VM keeps up
 IPERF_PORT, IPERF_MBPS = 5201, 12
+BIG_SPAM_BYTES = 4000                                          # floodbig: size of each spam message
 LINK_DOWN_AT, LINK_UP_AT = 10.0, 20.0                          # seconds after traffic starts (docs/eval-plan.md)
 DRAIN, WARMUP = 3.0, 3.0
 HOSTS = ("h2", "h3", "h4")
@@ -58,9 +59,11 @@ def make_plan(scenario, users=10, rate=None):
         if rate is None:
             plan["rate"] = SCALE_RATE.get(n, 2.0)
         plan["bots"] = {h: (k, False) for h, k in split(n).items()}
-    elif scenario == "flood":
+    elif scenario in ("flood", "floodbig"):
         # the spammer is alone on h4: rules are per IP, so flagging it throttles the whole host
         plan["bots"] = {"h2": ((users + 1) // 2, False), "h3": (users // 2, False), "h4": (0, True)}
+        if scenario == "floodbig":                  # large spam messages: the flood fills the bottleneck
+            plan["spam_size"] = BIG_SPAM_BYTES
     else:
         plan["bots"] = {h: (k, False) for h, k in split(users).items()}
         plan["iperf"] = scenario == "congested"
@@ -228,7 +231,11 @@ def run_one(mode, scenario, k, a):
                    "--prefix", hname + "u", "--room", ROOM, "--rate", str(plan["rate"]),
                    "--duration", str(a.duration), "--warmup", str(WARMUP), "--drain", str(DRAIN),
                    "--out", os.path.join(parts, hname + ".csv")]
-            if spam:
+            if spam and plan.get("spam_size"):
+                cmd = ["python3", "-u", "eval/bigspam.py", "--server", C.SERVER_IP, "--prefix", hname + "u",
+                       "--room", ROOM, "--rate", "200", "--size", str(plan["spam_size"]),
+                       "--duration", str(a.duration), "--warmup", str(WARMUP)]
+            elif spam:
                 cmd.append("--spammer")
             proc = h[hname].popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             logs[hname] = open("%s_bots_%s.log" % (stem, hname), "w")

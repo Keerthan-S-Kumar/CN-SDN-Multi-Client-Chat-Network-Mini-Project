@@ -35,7 +35,7 @@ experiments:
 	sudo env PYTHONPATH=. python3 eval/run_experiments.py
 
 report:
-	python3 eval/analyze.py && python3 eval/plot.py
+	python3 eval/analyze.py && python3 eval/plot.py && python3 eval/extra_metrics.py && python3 eval/plot_extra.py
 
 test:
 	$(PY) -m unittest controller.test_logic -v
@@ -50,6 +50,7 @@ reproduce: test test-chat
 	sudo env PYTHONPATH=. python3 eval/run_experiments.py --core --runs 3
 	sudo env PYTHONPATH=. python3 eval/run_experiments.py --only scale5,scale10,scale25 --runs 1
 	sudo env PYTHONPATH=. python3 eval/run_experiments.py --only scale50,scale100 --runs 3
+	sudo env PYTHONPATH=. python3 eval/run_experiments.py --only floodbig --runs 3
 	$(MAKE) report
 
 file-test:

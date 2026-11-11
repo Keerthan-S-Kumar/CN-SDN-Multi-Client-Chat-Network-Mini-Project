@@ -66,5 +66,5 @@ FILE_CHUNK = 32 * 1024            # raw bytes per FILE_CHUNK frame (base64 keeps
 RESULTS_DIR = "eval/results"
 CONTROLLER_LOG = RESULTS_DIR + "/controller_events.jsonl"
 MODES = ("sdn", "baseline")
-SCENARIOS = ("idle", "congested", "flood", "linkfail",
+SCENARIOS = ("idle", "congested", "flood", "floodbig", "linkfail",
              "scale5", "scale10", "scale25", "scale50", "scale100")
