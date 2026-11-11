@@ -632,7 +632,7 @@
     var rows = resultsCache || [];
     $("resempty").hidden = rows.length > 0;
     var by = {}; rows.forEach(function (r) { by[r.scenario + "/" + r.mode] = r; });
-    var sc = ["idle", "congested", "flood", "linkfail", "scale50"].filter(function (s) { return by[s + "/sdn"] && by[s + "/baseline"]; });
+    var sc = ["idle", "congested", "flood", "floodbig", "linkfail", "scale50"].filter(function (s) { return by[s + "/sdn"] && by[s + "/baseline"]; });
     var svg = $("resbars"); svg.textContent = "";
     if (sc.length) {
       var W = 900, H = 330, L = 60, B = 40, T = 16, lo = 1, hi = 100000, gw = (W - L - 10) / sc.length;
