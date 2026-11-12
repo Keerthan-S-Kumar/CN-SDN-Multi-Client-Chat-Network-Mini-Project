@@ -17,36 +17,50 @@ traffic, applies per-user and per-room policy, and reacts to application and net
 
 ```mermaid
 flowchart LR
-    subgraph CLIENTS["Client Layer"]
-        H2["h2 Client"]
-        H3["h3 Client"]
-        H4["h4 Client"]
-        B["Browser"]
+
+    subgraph APP["APPLICATION LAYER"]
+        direction TB
+        WB["Web Browser"]
+        RYU["Ryu SDN Controller"]
+        CLIENTS["Chat Clients<br/>h2, h3, h4"]
+        GATEWAY["Web Gateway<br/>chat/web_gateway.py"]
+
+        WB -->|"/ui dashboard"| RYU
+        WB -->|"Web chat :8000"| GATEWAY
     end
 
-    subgraph NETWORK["Mininet Network"]
-        S(("OVS Switches<br/>OpenFlow 1.3"))
-        H1["h1 Chat Server<br/>TCP Ports 5000-5003"]
-        G["Web Gateway<br/>chat/web_gateway.py"]
+    subgraph DATA["DATA PLANE - MININET"]
+        direction TB
+        OVS["OVS Switch Fabric<br/>OpenFlow 1.3"]
+        SERVER["Chat Server - h1<br/>TCP Ports 5000-5003"]
+        ROOT["Root Namespace Interface<br/>10.0.0.254"]
 
-        H2 --> S
-        H3 --> S
-        H4 --> S
-        S -->|"10 Mbps HTB bottleneck"| H1
-        G -->|"TCP 5000-5003"| S
+        OVS -->|"10 Mbps HTB bottleneck"| SERVER
+        OVS --- ROOT
     end
 
-    subgraph CONTROL["Control Layer"]
-        R["Root Namespace<br/>10.0.0.254"]
-        C["Ryu Controller<br/>REST :8080"]
+    subgraph CONTROL["CONTROL PLANE"]
+        direction TB
+        OF["OpenFlow Interface :6653"]
+        REST["REST API :8080"]
     end
 
-    H1 -.->|"POST /event"| R
-    R <-->|"REST communication"| C
-    C <-->|"OpenFlow 1.3 :6653<br/>Flows, meters, queues"| S
+    CLIENTS -->|"TCP chat traffic"| OVS
+    GATEWAY -->|"TCP 5000-5003"| OVS
 
-    B -->|"/ui Dashboard"| C
-    B -->|"Web Chat :8000"| G
+    SERVER -.->|"POST /event"| REST
+    RYU <-->|"REST communication"| REST
+
+    RYU --> OF
+    OF -->|"Flow rules, meters<br/>and queue selection"| OVS
+
+    classDef app fill:#dce9ff,stroke:#3478f6,color:#14264d
+    classDef controller fill:#f0e0ff,stroke:#963cff,color:#421078
+    classDef network fill:#dcfce7,stroke:#22a05a,color:#14532d
+
+    class WB,CLIENTS,GATEWAY app
+    class RYU,OF,REST controller
+    class OVS,SERVER,ROOT network
 ```
 
 | Component | What it does | Owner |
