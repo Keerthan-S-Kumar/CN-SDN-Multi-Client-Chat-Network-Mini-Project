@@ -1,0 +1,2 @@
+h3 sh -c "printf '/join lobby\n' | python3 chat/client.py --server 10.0.0.1 --user erin --register --linger 25" &
+h4 sh -c "(sleep 3; printf '/join lobby\n/msg lobby hello from h4\n') | python3 chat/client.py --server 10.0.0.1 --user frank --register --linger 3"

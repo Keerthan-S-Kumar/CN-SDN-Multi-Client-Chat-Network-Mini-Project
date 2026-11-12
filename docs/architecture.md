@@ -27,16 +27,23 @@ flowchart LR
   H1 -.->|"POST /event (REST)"| R
   R --- C["Ryu controller<br/>REST :8080"]
   C ==>|"OpenFlow 1.3 :6653<br/>flows, meters, queue selection"| S
+  B["Browser"] -->|"/ui dashboard"| C
+  B -->|"web chat :8000"| G["Web gateway<br/>chat/web_gateway.py"]
+  G -->|"real TCP 5000-5003"| S
 ```
 
 | Component | What it does | Owner |
 |---|---|---|
 | Chat server (`chat/server.py`) | Threaded TCP server on ports 5000-5003 on `h1`. Handles registration, login, rooms, private messages and bulk transfer. Tells the controller about every user event. | A |
 | Chat client and bots (`chat/client.py`, `chat/bot.py`) | Interactive client, and load-generating bots for the experiments. | A |
+| Web gateway and page (`chat/web_gateway.py`, `chat/web/`) | Browser chat. Each signed-in browser gets its own real TCP connections to the server, so the SDN gate, queues and throttles apply to it like any other client. | B |
 | Ryu controller (`controller/`) | Installs and removes flow rules from the events it receives, routes traffic, monitors the bottleneck, and exposes a REST API. | B |
+| Live dashboard (`controller/ui/`, `controller/ui_api.py`) | Served by the controller at `/ui`: network map, policies, traffic, SDN vs baseline results and a Demo guide that ticks off steps. See [`ui.md`](ui.md). | B |
 | Topology and QoS (`topology/`) | Builds the Mininet network and configures the HTB queues on the bottleneck port. | C |
-| Tests and experiments (`tests/`, `eval/run_experiments.py`) | Verify behaviour and generate the measurements. | C |
-| Analysis (`eval/analyze.py`, `eval/plot.py`) | Turn experiment CSVs into summary tables and graphs. | A |
+| Experiments (`eval/run_experiments.py`, `eval/bigspam.py`, `eval/file_transfer.py`) | Run every scenario in both modes and collect per-message CSVs and the controller event log. | C |
+| Extra metrics and charts (`eval/extra_metrics.py`, `eval/plot_extra.py`) | Failover and congestion reaction times, p95 for every scenario, latency over time. | C |
+| Tests and demo (`tests/`, `tools/demo.sh`, `tools/demo/all.cli`) | Unit and end-to-end tests, the automatic demo check (`make demo-check`) and the live demo launcher. | C |
+| Analysis (`eval/analyze.py`, `eval/plot.py`) | Turn experiment CSVs into summary tables and the core graphs. | A |
 
 ### Why the controller runs outside Mininet
 

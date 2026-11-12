@@ -74,12 +74,13 @@ flowchart LR
     H2["h2 clients"] --- S
     H3["h3 clients"] --- S
     H4["h4 clients"] --- S
-    S(("Open vSwitch<br/>OpenFlow 1.3")) --- H1["h1 chat server<br/>ports 5000-5003"]
+    S(("Open vSwitch<br/>OpenFlow 1.3")) ---|"10 Mbps bottleneck"| H1["h1 chat server<br/>ports 5000-5003"]
     S --- R["root namespace<br/>10.0.0.254"]
   end
   H1 -.->|"POST /event (REST)"| R
   R --- C["Ryu controller<br/>REST :8080"]
   C ==>|"OpenFlow :6653<br/>flow rules"| S
+  B["Browser"] -->|"/ui dashboard"| C
 ```
 
 How one registration works:
@@ -209,7 +210,7 @@ disappear on every switch.
 |---|---|
 | **Janhvi** | Chat application: threaded TCP server (registration, login, rooms, private messages, bulk port), command-line client, load-generating bots, spam and brute-force detection, result analysis and plotting scripts, and the chat server test suite. Part A documentation (`docs/part-a.md`). |
 | **Keerthan** | SDN controller: the Ryu application (flow rules, two-table pipeline, routing, policy, congestion monitor, REST API), its 23 unit tests and live verification script, the five-tab live dashboard, the browser chat client, file sharing (protocol v2.1, gateway and browser upload), salted password hashing and optional account persistence, the frozen interface contract, and repository administration (branching, reviews, CODEOWNERS). |
-| **Harsha** | Network and evaluation: Mininet topologies (single switch and triangle), the root-namespace link to the controller, Open vSwitch QoS queues, topology and triangle tests, the architecture document, and the D2 experiment runner (`eval/run_experiments.py`), result graphs, `docs/results.md`, `docs/testing.md` and `docs/demo-d2.md`. |
+| **Harsha** | Network and evaluation: Mininet topologies (single switch and triangle), the root-namespace link to the controller, Open vSwitch QoS queues, topology and triangle tests, the architecture document, the D2 experiment runner (`eval/run_experiments.py`) with the big-flood spammer and file-transfer scenarios, reaction-time metrics and extra result graphs (`eval/extra_metrics.py`, `eval/plot_extra.py`), the 22 evaluation unit tests, the automatic demo check (`tests/demo_auto.py`, `make demo-check`), `docs/results.md`, `docs/testing.md` and `docs/demo-d2.md`. |
 
 Ownership rules and the per-deliverable split are in [`docs/ownership.md`](docs/ownership.md).
 
@@ -220,9 +221,9 @@ chat/        TCP chat server, client, bots, spam detector, web gateway and page,
 controller/  Ryu OpenFlow 1.3 app, REST API, dashboard, unit tests, live verification script
 topology/    Mininet topologies (single, triangle) and Open vSwitch QoS queues
 common/      constants shared by everyone (ports, IPs, priorities, queues, thresholds)
-tests/       automated tests (chat server, web gateway, topology)
+tests/       automated tests (chat server, web gateway, topology, evaluation code) and the automatic demo check
 eval/        experiment runner, analysis and plotting (deliverable 2)
-tools/       mock controller, fake event sender, repository helpers
+tools/       demo launcher (demo.sh, demo/all.cli), mock controller, fake event sender, repository helpers
 docs/        architecture, interface contract, controller notes, evaluation plan, screenshots
 ```
 
@@ -230,7 +231,7 @@ docs/        architecture, interface contract, controller notes, evaluation plan
 
 | Doc | What it covers |
 |---|---|
-| [`docs/architecture.md`](docs/architecture.md) | Components, topologies, flow-table design, dynamic behaviour |
+| [`docs/architecture.md`](docs/architecture.md) | Components, topologies, flow-table design, dynamic behaviour, evaluation and how to run the demo |
 | [`docs/interfaces.md`](docs/interfaces.md) | The frozen contract: ports, message formats, events, flow rows |
 | [`docs/controller.md`](docs/controller.md) | The controller: design decisions, flow table and test cases |
 | [`docs/part-a.md`](docs/part-a.md) | Chat server, client, bots, spam detection, analysis scripts |
