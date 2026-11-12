@@ -17,19 +17,36 @@ traffic, applies per-user and per-room policy, and reacts to application and net
 
 ```mermaid
 flowchart LR
-  subgraph Mininet
-    H2["h2 clients"] --- S
-    H3["h3 clients"] --- S
-    H4["h4 clients"] --- S
-    S(("OVS switches<br/>OpenFlow 1.3")) ---|"bottleneck<br/>10 Mbps HTB"| H1["h1 chat server<br/>ports 5000-5003"]
-    S --- R["root namespace<br/>10.0.0.254"]
-  end
-  H1 -.->|"POST /event (REST)"| R
-  R --- C["Ryu controller<br/>REST :8080"]
-  C ==>|"OpenFlow 1.3 :6653<br/>flows, meters, queue selection"| S
-  B["Browser"] -->|"/ui dashboard"| C
-  B -->|"web chat :8000"| G["Web gateway<br/>chat/web_gateway.py"]
-  G -->|"real TCP 5000-5003"| S
+    subgraph CLIENTS["Client Layer"]
+        H2["h2 Client"]
+        H3["h3 Client"]
+        H4["h4 Client"]
+        B["Browser"]
+    end
+
+    subgraph NETWORK["Mininet Network"]
+        S(("OVS Switches<br/>OpenFlow 1.3"))
+        H1["h1 Chat Server<br/>TCP Ports 5000-5003"]
+        G["Web Gateway<br/>chat/web_gateway.py"]
+
+        H2 --> S
+        H3 --> S
+        H4 --> S
+        S -->|"10 Mbps HTB bottleneck"| H1
+        G -->|"TCP 5000-5003"| S
+    end
+
+    subgraph CONTROL["Control Layer"]
+        R["Root Namespace<br/>10.0.0.254"]
+        C["Ryu Controller<br/>REST :8080"]
+    end
+
+    H1 -.->|"POST /event"| R
+    R <-->|"REST communication"| C
+    C <-->|"OpenFlow 1.3 :6653<br/>Flows, meters, queues"| S
+
+    B -->|"/ui Dashboard"| C
+    B -->|"Web Chat :8000"| G
 ```
 
 | Component | What it does | Owner |
